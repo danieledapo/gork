@@ -18,7 +18,7 @@ type ZObject struct {
 	child         byte
 	name          string
 	propertiesPos uint16
-	properties    []string
+	properties    map[byte][]byte
 }
 
 func NewZObject(story []byte, number uint8, objTblPos uint16, abbrTblPos uint16) *ZObject {
@@ -53,12 +53,35 @@ func (obj *ZObject) configure(story []byte, number uint8, objTblPos uint16, abbr
 	obj.child = ReadZByte(story, addr+6)
 	obj.propertiesPos = ReadZWord(story, addr+propertyOffset)
 
-	if ReadZByte(story, obj.propertiesPos) != 0 {
+	obj.readProperties(story, abbrTblPos)
+}
+
+func (obj *ZObject) readProperties(story []byte, abbrTblPos uint16) {
+	// v3
+
+	obj.properties = make(map[byte][]byte)
+
+	// number of words
+	textLength := uint16(ReadZByte(story, obj.propertiesPos))
+	if textLength != 0 {
 		obj.name = string(DecodeZString(story, obj.propertiesPos+1, abbrTblPos))
 	}
 
-	// TODO read properties!
+	propPos := obj.propertiesPos + 1 + textLength*2
 
+	dataSize := ReadZByte(story, propPos)
+	for dataSize > 0 {
+		prop := dataSize & (0x20 - 1)
+		count := ((dataSize & 0xE0) >> 5) + 1
+		propPos++
+
+		for i := byte(0); i < count; i++ {
+			obj.properties[prop] = append(obj.properties[prop],
+				ReadZByte(story, propPos))
+			propPos++
+		}
+		dataSize = ReadZByte(story, propPos)
+	}
 }
 
 func ZObjectAddress(idx uint8, objTblPos uint16) uint16 {
@@ -107,6 +130,16 @@ func (obj *ZObject) Dump() {
 	fmt.Printf("attributes: %d\n", obj.attributes)
 	fmt.Printf("parent: %d sibling: %d child: %d\n", obj.parent, obj.sibling, obj.child)
 	fmt.Printf("name: %s\n", obj.name)
+	fmt.Print("properties:\n")
+
+	for k, v := range obj.properties {
+		fmt.Printf("  [%2d] ", k)
+		for b := range v {
+			fmt.Printf("%02X ", v[b])
+		}
+		fmt.Println("")
+	}
+	fmt.Println("")
 }
 
 func DumpAllZObjects(story []byte, objTblPos uint16, abbrTblPos uint16) {
