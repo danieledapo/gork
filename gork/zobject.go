@@ -126,32 +126,57 @@ func ZObjectsCount(story []byte, objTblPos uint16) uint8 {
 	return count - 1
 }
 
-func (obj *ZObject) Dump() {
-	fmt.Printf("attributes: %d\n", obj.attributes)
-	fmt.Printf("parent: %d sibling: %d child: %d\n", obj.parent, obj.sibling, obj.child)
-	fmt.Printf("name: %s\n", obj.name)
-	fmt.Print("properties:\n")
+func (obj *ZObject) String() string {
+	ret := ""
 
-	for k, v := range obj.properties {
-		fmt.Printf("  [%2d] ", k)
-		for b := range v {
-			fmt.Printf("%02X ", v[b])
+	ret += fmt.Sprintf("Attributes: ")
+	if len(obj.attributes) > 0 {
+		// ret += fmt.Sprintf("%d\n", obj.attributes)
+		for _, attr := range obj.attributes {
+			ret += fmt.Sprintf("%d, ", attr)
 		}
-		fmt.Println("")
+		// do not include " ,"
+		ret = ret[:len(ret)-2]
+		ret += fmt.Sprintln("")
+	} else {
+		ret += fmt.Sprintln("None\n")
 	}
-	fmt.Println("")
+
+	ret += fmt.Sprintf("     Parent object: %3d  ", obj.parent)
+	ret += fmt.Sprintf("Sibling object: %3d  ", obj.sibling)
+	ret += fmt.Sprintf("Child object: %3d\n", obj.child)
+
+	ret += fmt.Sprintf("     Property address: %04x\n", obj.propertiesPos)
+	ret += fmt.Sprintf("         Description: \"%s\"\n", obj.name)
+
+	ret += fmt.Sprintln("          Properties:")
+	for k, v := range obj.properties {
+		ret += fmt.Sprintf("              [%2d] ", k)
+		for b := range v {
+			ret += fmt.Sprintf("%02X ", v[b])
+		}
+		ret += fmt.Sprintln("")
+	}
+	ret += fmt.Sprintln("")
+
+	return ret
 }
 
 func DumpAllZObjects(story []byte, objTblPos uint16, abbrTblPos uint16) {
 	total := ZObjectsCount(story, objTblPos)
 
+	fmt.Print("\n    **** Objects ****\n\n")
+	fmt.Printf("  Object count = %d\n", total)
+
 	for i := uint8(1); i <= total; i++ {
-		fmt.Printf("******* Object #%d *******\n", i)
-		NewZObject(story, i, objTblPos, abbrTblPos).Dump()
+		fmt.Printf("%3d. %s", i, NewZObject(story, i, objTblPos, abbrTblPos))
 	}
 }
 
 func DumpZObjectsTree(story []byte, objTblPos uint16, abbrTblPos uint16) {
+
+	fmt.Print("\n    **** Object tree ****\n\n")
+
 	total := ZObjectsCount(story, objTblPos)
 
 	var printObject func(obj *ZObject, depth int)

@@ -88,23 +88,28 @@ func (zmem *ZHeader) configure(story []byte) {
 	zmem.fileChecksum = WordAt(0x1C)
 }
 
-func (zmem *ZHeader) Dump() {
-	fmt.Printf("version: %d\n", zmem.version)
+func (zmem *ZHeader) String() string {
+	ret := "\n    **** Story file header ****\n\n"
+	ret += fmt.Sprintf("  Z-code version:           %d\n", zmem.version)
 
+	ret += fmt.Sprint("  Interpreter flags:        ")
 	if zmem.config&0x01 == 0x01 {
-		fmt.Println("display hours:min")
+		ret += fmt.Sprintln("Display hours:min")
 	} else {
-		fmt.Println("display score/turns")
+		ret += fmt.Sprintln("Display score/turns")
 	}
 
-	fmt.Printf("release: %d\n", zmem.release)
-	fmt.Printf("high memory start: %X\n", zmem.highStart)
-	fmt.Printf("program counter: %X\n", zmem.pc)
-	fmt.Printf("dictionary pos: %X\n", zmem.dictPos)
-	fmt.Printf("object table pos: %X\n", zmem.objTblPos)
-	fmt.Printf("global variables pos: %X\n", zmem.globalsPos)
-	fmt.Printf("size of dynamic memory: %X\n", zmem.dynMemSize)
-	fmt.Printf("serial number: %c%c%c%c%c%c\n", zmem.serial[0], zmem.serial[1], zmem.serial[2], zmem.serial[3], zmem.serial[4], zmem.serial[5])
-	fmt.Printf("abbreviations table pos: %X\n", zmem.abbrTblPos)
-	fmt.Printf("fileLength: %X\nfileChecksum: %X\n", zmem.fileLength, zmem.fileChecksum)
+	ret += fmt.Sprintf("  Release number:           %d\n", zmem.release)
+	ret += fmt.Sprintf("  Size of resident memory:  %04x\n", zmem.highStart)
+	ret += fmt.Sprintf("  Start PC:                 %04x\n", zmem.pc)
+	ret += fmt.Sprintf("  Dictionary address:       %04x\n", zmem.dictPos)
+	ret += fmt.Sprintf("  Object table address:     %04x\n", zmem.objTblPos)
+	ret += fmt.Sprintf("  Global variables address: %04x\n", zmem.globalsPos)
+	ret += fmt.Sprintf("  Size of dynamic memory:   %04x\n", zmem.dynMemSize)
+	ret += fmt.Sprintf("  Serial number:            %c%c%c%c%c%c\n", zmem.serial[0], zmem.serial[1], zmem.serial[2], zmem.serial[3], zmem.serial[4], zmem.serial[5])
+	ret += fmt.Sprintf("  Abbreviations address:    %04x\n", zmem.abbrTblPos)
+	ret += fmt.Sprintf("  File size:                %05x\n", zmem.fileLength)
+	ret += fmt.Sprintf("  Checksum:                 %04x\n", zmem.fileChecksum)
+
+	return ret
 }
