@@ -11,6 +11,7 @@ func main() {
 	i := flag.Bool("i", true, "show game information in header")
 	o := flag.Bool("o", false, "show objects")
 	t := flag.Bool("t", false, "show object tree")
+	a := flag.Bool("a", false, "show abbreviations")
 	flag.Parse()
 
 	// test only Zork :)
@@ -34,6 +35,9 @@ func main() {
 
 	if *t {
 		gork.DumpZObjectsTree(story, objTblPos, abbrTblPos)
+	}
+	if *a {
+		gork.DumpAbbreviations(story, abbrTblPos)
 	}
 
 	fmt.Println("")

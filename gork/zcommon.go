@@ -1,5 +1,9 @@
 package gork
 
+import (
+	"fmt"
+)
+
 // v3
 var Alphabets = [3]string{
 	"abcdefghijklmnopqrstuvwxyz",
@@ -20,6 +24,20 @@ func ReadUint32(buf []byte, addr uint16) uint32 {
 	// Big Endian
 	return (uint32(buf[addr]) << 24) | (uint32(buf[addr+1]) << 16) |
 		(uint32(buf[addr+2]) << 8) | uint32(buf[addr+3])
+}
+
+func GetAbbreviations(story []byte, abbrTblPos uint16) []string {
+	// v3 3 tables * 32 entries each
+	const abbrCount = 32 * 3
+
+	ret := []string{}
+
+	for i := uint16(0); i < abbrCount; i++ {
+		addr := ReadZWord(story, abbrTblPos+i*2) * 2
+		ret = append(ret, DecodeZString(story, addr, abbrTblPos))
+	}
+
+	return ret
 }
 
 func DecodeZString(story []byte, addr uint16, abbrTblPos uint16) string {
@@ -88,4 +106,19 @@ func DecodeZString(story []byte, addr uint16, abbrTblPos uint16) string {
 	}
 
 	return ret
+}
+
+func DumpAbbreviations(story []byte, abbrTblPos uint16) {
+	fmt.Print("\n    **** Abbreviations ****\n\n")
+
+	abbrs := GetAbbreviations(story, abbrTblPos)
+
+	if len(abbrs) == 0 {
+		fmt.Printf("  No abbreviation information.\n")
+		return
+	}
+
+	for i, abbr := range abbrs {
+		fmt.Printf("  [%2d] \"%s\"\n", i, abbr)
+	}
 }
