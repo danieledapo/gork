@@ -76,7 +76,9 @@ func DecodeZString(story []byte, addr uint16, abbrTblPos uint16) string {
 				ret += DecodeZString(story, tmpAddr, abbrTblPos)
 				alphabet = shiftLock
 			} else if asciiPart > 0 {
-				if asciiPart++; asciiPart == 1 {
+				tmp := asciiPart
+				asciiPart++
+				if tmp == 1 {
 					asciiFirstPart = code << 5
 				} else {
 					asciiPart = 0
