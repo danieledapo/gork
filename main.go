@@ -12,6 +12,7 @@ func main() {
 	o := flag.Bool("o", false, "show objects")
 	t := flag.Bool("t", false, "show object tree")
 	a := flag.Bool("a", false, "show abbreviations")
+	d := flag.Bool("d", false, "show dictionary")
 	flag.Parse()
 
 	// test only Zork :)
@@ -19,14 +20,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	// trust me :)
-	const objTblPos = 0x02B0
-	const abbrTblPos = 0x01F0
+	const (
+		objTblPos  = 0x02B0
+		abbrTblPos = 0x01F0
+		dictPos    = 0x3B21
+	)
 
 	fmt.Println("\nStory file is zork1.z5")
 
 	if *i {
-		fmt.Printf("%s\n", gork.NewZHeader(story))
+		fmt.Println(gork.NewZHeader(story))
 	}
 
 	if *o {
@@ -36,8 +41,13 @@ func main() {
 	if *t {
 		gork.DumpZObjectsTree(story, objTblPos, abbrTblPos)
 	}
+
 	if *a {
 		gork.DumpAbbreviations(story, abbrTblPos)
+	}
+
+	if *d {
+		fmt.Println(gork.NewZDictionary(story, dictPos, abbrTblPos))
 	}
 
 	fmt.Println("")
