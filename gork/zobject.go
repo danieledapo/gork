@@ -2,6 +2,7 @@ package gork
 
 import (
 	"fmt"
+	"sort"
 )
 
 const (
@@ -149,10 +150,17 @@ func (obj *ZObject) String() string {
 	ret += fmt.Sprintf("         Description: \"%s\"\n", obj.name)
 
 	ret += fmt.Sprintln("          Properties:")
-	for k, v := range obj.properties {
+
+	var keys []int
+	for k := range obj.properties {
+		keys = append(keys, int(k))
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
+
+	for _, k := range keys {
 		ret += fmt.Sprintf("              [%2d] ", k)
-		for b := range v {
-			ret += fmt.Sprintf("%02X ", v[b])
+		for b := range obj.properties[byte(k)] {
+			ret += fmt.Sprintf("%02X ", obj.properties[byte(k)][b])
 		}
 		ret += fmt.Sprintln("")
 	}
