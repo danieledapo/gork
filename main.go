@@ -16,10 +16,11 @@ func main() {
 	flag.Parse()
 
 	// test only Zork :)
-	story, err := ioutil.ReadFile("zork1.z5")
+	buf, err := ioutil.ReadFile("zork1.z5")
 	if err != nil {
 		panic(err)
 	}
+	story := gork.NewZStory(buf)
 
 	// trust me :)
 	const (

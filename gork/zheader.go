@@ -27,39 +27,33 @@ type ZHeader struct {
 	fileChecksum uint16
 }
 
-func NewZHeader(story []byte) *ZHeader {
+func NewZHeader(story *ZStory) *ZHeader {
 	zmem := new(ZHeader)
 	zmem.configure(story)
 	return zmem
 }
 
-func (zmem *ZHeader) configure(story []byte) {
-	ByteAt := func(addr uint16) byte {
-		return ReadZByte(story, addr)
-	}
+func (zmem *ZHeader) configure(story *ZStory) {
+	story.pos = 0
 
-	WordAt := func(addr uint16) uint16 {
-		return ReadZWord(story, addr)
-	}
-
-	zmem.version = ByteAt(0)
+	zmem.version = story.ReadByte()
 
 	if zmem.version > 3 {
 		panic("versions > 3 are not supported!")
 	}
 
-	zmem.config = ByteAt(1)
-	zmem.release = WordAt(2)
+	zmem.config = story.ReadByte()
+	zmem.release = story.ReadWord()
 
-	zmem.highStart = WordAt(4)
+	zmem.highStart = story.ReadWord()
 
-	zmem.pc = WordAt(6)
+	zmem.pc = story.ReadWord()
 
-	zmem.dictPos = WordAt(8)
-	zmem.objTblPos = WordAt(0xA)
-	zmem.globalsPos = WordAt(0xC)
+	zmem.dictPos = story.ReadWord()
+	zmem.objTblPos = story.ReadWord()
+	zmem.globalsPos = story.ReadWord()
 
-	zmem.dynMemSize = WordAt(0xE)
+	zmem.dynMemSize = story.ReadWord()
 
 	if zmem.dynMemSize < 64 {
 		panic("dynamic size cannot be < 64 bytes")
@@ -71,21 +65,22 @@ func (zmem *ZHeader) configure(story []byte) {
 
 	// who cares if dynMemSize + staticMemorySize(min(0xFFFF, fileSize)) < 64KB ?
 
+	story.pos = 0x12
 	for i := 0; i < SerialSize; i++ {
-		zmem.serial[i] = ByteAt(uint16(0x12 + i))
+		zmem.serial[i] = story.ReadByte()
 	}
 
-	zmem.abbrTblPos = WordAt(0x18)
+	zmem.abbrTblPos = story.ReadWord()
 
 	// v3
-	zmem.fileLength = uint64(WordAt(0x1A)) * 2
+	zmem.fileLength = uint64(story.ReadWord()) * 2
 
 	// v3 max file length 128K
 	if zmem.fileLength > 128*1024 {
 		panic("story file too big!")
 	}
 
-	zmem.fileChecksum = WordAt(0x1C)
+	zmem.fileChecksum = story.ReadWord()
 }
 
 func (zmem *ZHeader) String() string {

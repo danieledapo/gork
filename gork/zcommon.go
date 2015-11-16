@@ -11,36 +11,25 @@ var Alphabets = [3]string{
 	" \n0123456789.,!?_#'\"/\\-:()",
 }
 
-func ReadZByte(buf []byte, addr uint16) byte {
-	return buf[addr]
-}
-
-func ReadZWord(buf []byte, addr uint16) uint16 {
-	// Big Endian
-	return (uint16(buf[addr]) << 8) | (uint16(buf[addr+1]))
-}
-
-func ReadUint32(buf []byte, addr uint16) uint32 {
-	// Big Endian
-	return (uint32(buf[addr]) << 24) | (uint32(buf[addr+1]) << 16) |
-		(uint32(buf[addr+2]) << 8) | uint32(buf[addr+3])
-}
-
-func GetAbbreviations(story []byte, abbrTblPos uint16) []string {
+func GetAbbreviations(story *ZStory, abbrTblPos uint16) []string {
 	// v3 3 tables * 32 entries each
 	const abbrCount = 32 * 3
+
+	story.pos = abbrTblPos
 
 	ret := []string{}
 
 	for i := uint16(0); i < abbrCount; i++ {
-		addr := ReadZWord(story, abbrTblPos+i*2) * 2
+		addr := story.ReadWord() * 2
+		tmpPos := story.pos
 		ret = append(ret, DecodeZString(story, addr, abbrTblPos))
+		story.pos = tmpPos
 	}
 
 	return ret
 }
 
-func DecodeZString(story []byte, addr uint16, abbrTblPos uint16) string {
+func DecodeZString(story *ZStory, addr uint16, abbrTblPos uint16) string {
 	// v3
 
 	ret := ""
@@ -59,11 +48,12 @@ func DecodeZString(story []byte, addr uint16, abbrTblPos uint16) string {
 	asciiPart := uint8(0)
 	asciiFirstPart := uint16(0)
 
-	offset := uint16(0)
+	// save current position
+	oldPos := story.pos
+	story.pos = addr
 
 	for data&0x8000 == 0 {
-		data = ReadZWord(story, addr+offset)
-		offset += 2
+		data = story.ReadWord()
 
 		for i := 10; i >= 0; i -= 5 {
 			code = (data >> uint8(i)) & 0x1F
@@ -71,9 +61,13 @@ func DecodeZString(story []byte, addr uint16, abbrTblPos uint16) string {
 			if synonimFlag {
 				synonimFlag = false
 				synonim = (synonim - 1) * 64
-				pos := abbrTblPos + synonim + code*2
-				tmpAddr := ReadZWord(story, pos) * 2
+
+				oldPos := story.pos
+				story.pos = abbrTblPos + synonim + code*2
+				tmpAddr := story.ReadWord() * 2
 				ret += DecodeZString(story, tmpAddr, abbrTblPos)
+				story.pos = oldPos
+
 				alphabet = shiftLock
 			} else if asciiPart > 0 {
 				tmp := asciiPart
@@ -107,10 +101,12 @@ func DecodeZString(story []byte, addr uint16, abbrTblPos uint16) string {
 		}
 	}
 
+	// restore old position
+	story.pos = oldPos
 	return ret
 }
 
-func DumpAbbreviations(story []byte, abbrTblPos uint16) {
+func DumpAbbreviations(story *ZStory, abbrTblPos uint16) {
 	fmt.Print("\n    **** Abbreviations ****\n\n")
 
 	abbrs := GetAbbreviations(story, abbrTblPos)

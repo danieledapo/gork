@@ -21,23 +21,23 @@ type ZObject struct {
 	properties    map[byte][]byte
 }
 
-func NewZObject(story []byte, number uint8, objTblPos uint16, abbrTblPos uint16) *ZObject {
+func NewZObject(story *ZStory, number uint8, objTblPos uint16, abbrTblPos uint16) *ZObject {
 	obj := new(ZObject)
 	obj.configure(story, number, objTblPos, abbrTblPos)
 	return obj
 }
 
-func (obj *ZObject) configure(story []byte, number uint8, objTblPos uint16, abbrTblPos uint16) {
+func (obj *ZObject) configure(story *ZStory, number uint8, objTblPos uint16, abbrTblPos uint16) {
 	obj.number = number
 
-	addr := ZObjectAddress(number, objTblPos)
+	story.pos = ZObjectAddress(number, objTblPos)
 
 	// v3 attributes is 32 bit
 	// more significant bit <-> attribute # smaller
 	//
 	// Bit  #  0 1 2 3 4 5 6 7
 	// Attr #  7 6 5 4 3 2 1 0
-	attr := ReadUint32(story, addr)
+	attr := story.ReadUint32()
 	for i := 3; i >= 0; i-- {
 		byteno := uint8(3 - i)
 		bits := uint8(attr >> (uint8(i) * 8))
@@ -48,39 +48,39 @@ func (obj *ZObject) configure(story []byte, number uint8, objTblPos uint16, abbr
 		}
 	}
 
-	obj.parent = ReadZByte(story, addr+4)
-	obj.sibling = ReadZByte(story, addr+5)
-	obj.child = ReadZByte(story, addr+6)
-	obj.propertiesPos = ReadZWord(story, addr+propertyOffset)
+	obj.parent = story.ReadByte()
+	obj.sibling = story.ReadByte()
+	obj.child = story.ReadByte()
+	obj.propertiesPos = story.ReadWord()
 
 	obj.readProperties(story, abbrTblPos)
 }
 
-func (obj *ZObject) readProperties(story []byte, abbrTblPos uint16) {
+func (obj *ZObject) readProperties(story *ZStory, abbrTblPos uint16) {
 	// v3
 
 	obj.properties = make(map[byte][]byte)
 
+	story.pos = obj.propertiesPos
+
 	// number of words
-	textLength := uint16(ReadZByte(story, obj.propertiesPos))
+	textLength := uint16(story.ReadByte())
 	if textLength != 0 {
 		obj.name = string(DecodeZString(story, obj.propertiesPos+1, abbrTblPos))
 	}
 
-	propPos := obj.propertiesPos + 1 + textLength*2
+	story.pos = obj.propertiesPos + 1 + textLength*2
 
-	dataSize := ReadZByte(story, propPos)
+	dataSize := story.ReadByte()
 	for dataSize > 0 {
 		prop := dataSize & (0x20 - 1)
 		count := ((dataSize & 0xE0) >> 5) + 1
-		propPos++
 
 		for i := byte(0); i < count; i++ {
 			obj.properties[prop] = append(obj.properties[prop],
-				ReadZByte(story, propPos))
-			propPos++
+				story.ReadByte())
 		}
-		dataSize = ReadZByte(story, propPos)
+		dataSize = story.ReadByte()
 	}
 }
 
@@ -92,19 +92,18 @@ func ZObjectAddress(idx uint8, objTblPos uint16) uint16 {
 	return uint16(objTblPos) + 31*2 + uint16(idx-1)*uint16(zobjectSize)
 }
 
-func ZObjectsCount(story []byte, objTblPos uint16) uint8 {
+func ZObjectsCount(story *ZStory, objTblPos uint16) uint8 {
 	count := uint8(0)
 	firstPropertyPos := uint16(0)
-	addr := uint16(0)
 
 	doCount := func() {
 		count++
-		addr = ZObjectAddress(count, objTblPos)
+		story.pos = ZObjectAddress(count, objTblPos)
 
-		if firstPropertyPos == 0 || addr < firstPropertyPos {
-			addr += propertyOffset
+		if firstPropertyPos == 0 || story.pos < firstPropertyPos {
+			story.pos += propertyOffset
 
-			propertyPos := ReadZWord(story, addr)
+			propertyPos := story.PeekWord()
 			if firstPropertyPos == 0 || propertyPos < firstPropertyPos {
 				firstPropertyPos = propertyPos
 			}
@@ -118,7 +117,7 @@ func ZObjectsCount(story []byte, objTblPos uint16) uint8 {
 	// object #N
 	// object #1 properties
 	doCount()
-	for addr < firstPropertyPos {
+	for story.pos < firstPropertyPos {
 		doCount()
 	}
 
@@ -162,18 +161,18 @@ func (obj *ZObject) String() string {
 	return ret
 }
 
-func DumpAllZObjects(story []byte, objTblPos uint16, abbrTblPos uint16) {
+func DumpAllZObjects(story *ZStory, objTblPos uint16, abbrTblPos uint16) {
 	total := ZObjectsCount(story, objTblPos)
 
 	fmt.Print("\n    **** Objects ****\n\n")
-	fmt.Printf("  Object count = %d\n", total)
+	fmt.Printf("  Object count = %d\n\n", total)
 
 	for i := uint8(1); i <= total; i++ {
 		fmt.Printf("%3d. %s", i, NewZObject(story, i, objTblPos, abbrTblPos))
 	}
 }
 
-func DumpZObjectsTree(story []byte, objTblPos uint16, abbrTblPos uint16) {
+func DumpZObjectsTree(story *ZStory, objTblPos uint16, abbrTblPos uint16) {
 
 	fmt.Print("\n    **** Object tree ****\n\n")
 

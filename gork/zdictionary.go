@@ -11,30 +11,25 @@ type ZDictionary struct {
 	// ignore words data, it looks like they are useless to interpreters
 }
 
-func NewZDictionary(story []byte, dictPos uint16, abbrTblPos uint16) *ZDictionary {
+func NewZDictionary(story *ZStory, dictPos uint16, abbrTblPos uint16) *ZDictionary {
 	zdict := new(ZDictionary)
 
-	n := ReadZByte(story, dictPos)
-
-	addr := dictPos
+	story.pos = dictPos
+	n := story.ReadByte()
 
 	for i := uint8(0); i < n; i++ {
-		addr++
-		wordSep := ReadZByte(story, addr)
+		wordSep := story.ReadByte()
 		zdict.wordSeparators = append(zdict.wordSeparators, wordSep)
 	}
-	addr++
 
-	zdict.entrySize = ReadZByte(story, addr)
-	addr++
+	zdict.entrySize = story.ReadByte()
 
-	entryCount := ReadZWord(story, addr)
-	addr += 2
+	entryCount := story.ReadWord()
 
 	for i := uint16(0); i < entryCount; i++ {
-		word := DecodeZString(story, addr, abbrTblPos)
+		word := DecodeZString(story, story.pos, abbrTblPos)
 		zdict.words = append(zdict.words, word)
-		addr += uint16(zdict.entrySize)
+		story.pos += uint16(zdict.entrySize)
 	}
 
 	return zdict
@@ -46,7 +41,7 @@ func (zdict *ZDictionary) String() string {
 	ret += fmt.Sprintf("  Word count = %d, word size = %d\n\n", len(zdict.words), zdict.entrySize)
 
 	for i, word := range zdict.words {
-		ret += fmt.Sprintf("  [%4d] %s\n", i, word)
+		ret += fmt.Sprintf("  [%4d] %s\n", i+1, word)
 	}
 
 	return ret
