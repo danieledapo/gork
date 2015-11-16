@@ -22,33 +22,28 @@ func main() {
 	}
 	story := gork.NewZStory(buf)
 
-	// trust me :)
-	const (
-		objTblPos  = 0x02B0
-		abbrTblPos = 0x01F0
-		dictPos    = 0x3B21
-	)
-
 	fmt.Println("\nStory file is zork1.z5")
 
+	header := gork.NewZHeader(story)
+
 	if *i {
-		fmt.Println(gork.NewZHeader(story))
+		fmt.Println(header)
 	}
 
 	if *o {
-		gork.DumpAllZObjects(story, objTblPos, abbrTblPos)
+		gork.DumpAllZObjects(story, header)
 	}
 
 	if *t {
-		gork.DumpZObjectsTree(story, objTblPos, abbrTblPos)
+		gork.DumpZObjectsTree(story, header)
 	}
 
 	if *a {
-		gork.DumpAbbreviations(story, abbrTblPos)
+		gork.DumpAbbreviations(story, header)
 	}
 
 	if *d {
-		fmt.Println(gork.NewZDictionary(story, dictPos, abbrTblPos))
+		fmt.Println(gork.NewZDictionary(story, header))
 	}
 
 	fmt.Println("")

@@ -11,25 +11,25 @@ var Alphabets = [3]string{
 	" \n0123456789.,!?_#'\"/\\-:()",
 }
 
-func GetAbbreviations(story *ZStory, abbrTblPos uint16) []string {
+func GetAbbreviations(story *ZStory, header *ZHeader) []string {
 	// v3 3 tables * 32 entries each
 	const abbrCount = 32 * 3
 
-	story.pos = abbrTblPos
+	story.pos = header.abbrTblPos
 
 	ret := []string{}
 
 	for i := uint16(0); i < abbrCount; i++ {
 		addr := story.ReadWord() * 2
 		tmpPos := story.pos
-		ret = append(ret, DecodeZString(story, addr, abbrTblPos))
+		ret = append(ret, DecodeZString(story, addr, header))
 		story.pos = tmpPos
 	}
 
 	return ret
 }
 
-func DecodeZString(story *ZStory, addr uint16, abbrTblPos uint16) string {
+func DecodeZString(story *ZStory, addr uint16, header *ZHeader) string {
 	// v3
 
 	ret := ""
@@ -63,9 +63,9 @@ func DecodeZString(story *ZStory, addr uint16, abbrTblPos uint16) string {
 				synonim = (synonim - 1) * 64
 
 				oldPos := story.pos
-				story.pos = abbrTblPos + synonim + code*2
+				story.pos = header.abbrTblPos + synonim + code*2
 				tmpAddr := story.ReadWord() * 2
-				ret += DecodeZString(story, tmpAddr, abbrTblPos)
+				ret += DecodeZString(story, tmpAddr, header)
 				story.pos = oldPos
 
 				alphabet = shiftLock
@@ -106,10 +106,10 @@ func DecodeZString(story *ZStory, addr uint16, abbrTblPos uint16) string {
 	return ret
 }
 
-func DumpAbbreviations(story *ZStory, abbrTblPos uint16) {
+func DumpAbbreviations(story *ZStory, header *ZHeader) {
 	fmt.Print("\n    **** Abbreviations ****\n\n")
 
-	abbrs := GetAbbreviations(story, abbrTblPos)
+	abbrs := GetAbbreviations(story, header)
 
 	if len(abbrs) == 0 {
 		fmt.Printf("  No abbreviation information.\n")

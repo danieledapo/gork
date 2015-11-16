@@ -11,10 +11,10 @@ type ZDictionary struct {
 	// ignore words data, it looks like they are useless to interpreters
 }
 
-func NewZDictionary(story *ZStory, dictPos uint16, abbrTblPos uint16) *ZDictionary {
+func NewZDictionary(story *ZStory, header *ZHeader) *ZDictionary {
 	zdict := new(ZDictionary)
 
-	story.pos = dictPos
+	story.pos = header.dictPos
 	n := story.ReadByte()
 
 	for i := uint8(0); i < n; i++ {
@@ -27,7 +27,7 @@ func NewZDictionary(story *ZStory, dictPos uint16, abbrTblPos uint16) *ZDictiona
 	entryCount := story.ReadWord()
 
 	for i := uint16(0); i < entryCount; i++ {
-		word := DecodeZString(story, story.pos, abbrTblPos)
+		word := DecodeZString(story, story.pos, header)
 		zdict.words = append(zdict.words, word)
 		story.pos += uint16(zdict.entrySize)
 	}

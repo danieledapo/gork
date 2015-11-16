@@ -21,16 +21,16 @@ type ZObject struct {
 	properties    map[byte][]byte
 }
 
-func NewZObject(story *ZStory, number uint8, objTblPos uint16, abbrTblPos uint16) *ZObject {
+func NewZObject(story *ZStory, number uint8, header *ZHeader) *ZObject {
 	obj := new(ZObject)
-	obj.configure(story, number, objTblPos, abbrTblPos)
+	obj.configure(story, number, header)
 	return obj
 }
 
-func (obj *ZObject) configure(story *ZStory, number uint8, objTblPos uint16, abbrTblPos uint16) {
+func (obj *ZObject) configure(story *ZStory, number uint8, header *ZHeader) {
 	obj.number = number
 
-	story.pos = ZObjectAddress(number, objTblPos)
+	story.pos = ZObjectAddress(number, header)
 
 	// v3 attributes is 32 bit
 	// more significant bit <-> attribute # smaller
@@ -53,10 +53,10 @@ func (obj *ZObject) configure(story *ZStory, number uint8, objTblPos uint16, abb
 	obj.child = story.ReadByte()
 	obj.propertiesPos = story.ReadWord()
 
-	obj.readProperties(story, abbrTblPos)
+	obj.readProperties(story, header)
 }
 
-func (obj *ZObject) readProperties(story *ZStory, abbrTblPos uint16) {
+func (obj *ZObject) readProperties(story *ZStory, header *ZHeader) {
 	// v3
 
 	obj.properties = make(map[byte][]byte)
@@ -66,7 +66,7 @@ func (obj *ZObject) readProperties(story *ZStory, abbrTblPos uint16) {
 	// number of words
 	textLength := uint16(story.ReadByte())
 	if textLength != 0 {
-		obj.name = string(DecodeZString(story, obj.propertiesPos+1, abbrTblPos))
+		obj.name = string(DecodeZString(story, obj.propertiesPos+1, header))
 	}
 
 	story.pos = obj.propertiesPos + 1 + textLength*2
@@ -84,21 +84,21 @@ func (obj *ZObject) readProperties(story *ZStory, abbrTblPos uint16) {
 	}
 }
 
-func ZObjectAddress(idx uint8, objTblPos uint16) uint16 {
+func ZObjectAddress(idx uint8, header *ZHeader) uint16 {
 	if idx < 1 {
 		panic("objects are numbered from 1 to 255")
 	}
 	// v3 skip 31 words containing property default table
-	return uint16(objTblPos) + 31*2 + uint16(idx-1)*uint16(zobjectSize)
+	return uint16(header.objTblPos) + 31*2 + uint16(idx-1)*uint16(zobjectSize)
 }
 
-func ZObjectsCount(story *ZStory, objTblPos uint16) uint8 {
+func ZObjectsCount(story *ZStory, header *ZHeader) uint8 {
 	count := uint8(0)
 	firstPropertyPos := uint16(0)
 
 	doCount := func() {
 		count++
-		story.pos = ZObjectAddress(count, objTblPos)
+		story.pos = ZObjectAddress(count, header)
 
 		if firstPropertyPos == 0 || story.pos < firstPropertyPos {
 			story.pos += propertyOffset
@@ -161,22 +161,22 @@ func (obj *ZObject) String() string {
 	return ret
 }
 
-func DumpAllZObjects(story *ZStory, objTblPos uint16, abbrTblPos uint16) {
-	total := ZObjectsCount(story, objTblPos)
+func DumpAllZObjects(story *ZStory, header *ZHeader) {
+	total := ZObjectsCount(story, header)
 
 	fmt.Print("\n    **** Objects ****\n\n")
 	fmt.Printf("  Object count = %d\n\n", total)
 
 	for i := uint8(1); i <= total; i++ {
-		fmt.Printf("%3d. %s", i, NewZObject(story, i, objTblPos, abbrTblPos))
+		fmt.Printf("%3d. %s", i, NewZObject(story, i, header))
 	}
 }
 
-func DumpZObjectsTree(story *ZStory, objTblPos uint16, abbrTblPos uint16) {
+func DumpZObjectsTree(story *ZStory, header *ZHeader) {
 
 	fmt.Print("\n    **** Object tree ****\n\n")
 
-	total := ZObjectsCount(story, objTblPos)
+	total := ZObjectsCount(story, header)
 
 	var printObject func(obj *ZObject, depth int)
 	printObject = func(obj *ZObject, depth int) {
@@ -189,19 +189,19 @@ func DumpZObjectsTree(story *ZStory, objTblPos uint16, abbrTblPos uint16) {
 			fmt.Printf("\"%s\"\n", obj.name)
 
 			if obj.child != 0 {
-				childobj := NewZObject(story, obj.child, objTblPos, abbrTblPos)
+				childobj := NewZObject(story, obj.child, header)
 				printObject(childobj, depth+1)
 			}
 
 			if obj.sibling == 0 {
 				break
 			}
-			obj = NewZObject(story, obj.sibling, objTblPos, abbrTblPos)
+			obj = NewZObject(story, obj.sibling, header)
 		}
 	}
 
 	for i := uint8(1); i <= total; i++ {
-		zobj := NewZObject(story, i, objTblPos, abbrTblPos)
+		zobj := NewZObject(story, i, header)
 
 		// root
 		if zobj.parent == 0 {
