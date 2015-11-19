@@ -120,3 +120,13 @@ func DumpAbbreviations(story *ZStory, header *ZHeader) {
 		fmt.Printf("  [%2d] \"%s\"\n", i, abbr)
 	}
 }
+
+func PackedAddress(addr uint16) uint16 {
+	// v3
+	return addr * 2
+}
+
+func IsPackedAddress(addr uint16) bool {
+	// v3
+	return addr%2 == 0
+}
