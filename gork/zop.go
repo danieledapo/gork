@@ -34,8 +34,10 @@ type ZOp struct {
 	// - text   	zstring
 }
 
-func NewZOp(story *ZStory) *ZOp {
+func NewZOp(story *ZStory, addr uint16) *ZOp {
 	zop := new(ZOp)
+
+	story.pos = addr
 
 	opcode := story.ReadByte()
 
