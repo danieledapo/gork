@@ -23,6 +23,16 @@ func (zstory *ZStory) PeekWord() uint16 {
 		(uint16(zstory.buf[zstory.pos+1]))
 }
 
+func (zstory *ZStory) PeekByteAt(addr uint16) byte {
+	return zstory.buf[addr]
+}
+
+func (zstory *ZStory) PeekWordAt(addr uint16) uint16 {
+	// Big Endian
+	return (uint16(zstory.buf[addr]) << 8) |
+		(uint16(zstory.buf[addr+1]))
+}
+
 func (zstory *ZStory) PeekUInt32() uint32 {
 	// Big Endian
 	return (uint32(zstory.buf[zstory.pos]) << 24) |

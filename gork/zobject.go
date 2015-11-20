@@ -67,7 +67,7 @@ func (obj *ZObject) readProperties(story *ZStory, header *ZHeader) {
 	// number of words
 	textLength := uint16(story.ReadByte())
 	if textLength != 0 {
-		obj.name = string(DecodeZString(story, obj.propertiesPos+1, header))
+		obj.name = string(DecodeZStringAt(story, obj.propertiesPos+1, header))
 	}
 
 	story.pos = obj.propertiesPos + 1 + textLength*2

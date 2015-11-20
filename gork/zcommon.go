@@ -22,14 +22,27 @@ func GetAbbreviations(story *ZStory, header *ZHeader) []string {
 	for i := uint16(0); i < abbrCount; i++ {
 		addr := story.ReadWord() * 2
 		tmpPos := story.pos
-		ret = append(ret, DecodeZString(story, addr, header))
+		ret = append(ret, DecodeZStringAt(story, addr, header))
 		story.pos = tmpPos
 	}
 
 	return ret
 }
 
-func DecodeZString(story *ZStory, addr uint16, header *ZHeader) string {
+func DecodeZStringAt(story *ZStory, addr uint16, header *ZHeader) string {
+	// save current position
+	oldPos := story.pos
+	story.pos = addr
+
+	str := DecodeZString(story, header)
+
+	// restore old position
+	story.pos = oldPos
+
+	return str
+}
+
+func DecodeZString(story *ZStory, header *ZHeader) string {
 	// v3
 
 	ret := ""
@@ -48,10 +61,6 @@ func DecodeZString(story *ZStory, addr uint16, header *ZHeader) string {
 	asciiPart := uint8(0)
 	asciiFirstPart := uint16(0)
 
-	// save current position
-	oldPos := story.pos
-	story.pos = addr
-
 	for data&0x8000 == 0 {
 		data = story.ReadWord()
 
@@ -62,11 +71,8 @@ func DecodeZString(story *ZStory, addr uint16, header *ZHeader) string {
 				synonimFlag = false
 				synonim = (synonim - 1) * 64
 
-				oldPos := story.pos
-				story.pos = header.abbrTblPos + synonim + code*2
-				tmpAddr := story.ReadWord() * 2
-				ret += DecodeZString(story, tmpAddr, header)
-				story.pos = oldPos
+				tmpAddr := story.PeekWordAt(header.abbrTblPos+synonim+code*2) * 2
+				ret += DecodeZStringAt(story, tmpAddr, header)
 
 				alphabet = shiftLock
 			} else if asciiPart > 0 {
@@ -101,8 +107,6 @@ func DecodeZString(story *ZStory, addr uint16, header *ZHeader) string {
 		}
 	}
 
-	// restore old position
-	story.pos = oldPos
 	return ret
 }
 

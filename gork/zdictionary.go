@@ -27,7 +27,7 @@ func NewZDictionary(story *ZStory, header *ZHeader) *ZDictionary {
 	entryCount := story.ReadWord()
 
 	for i := uint16(0); i < entryCount; i++ {
-		word := DecodeZString(story, story.pos, header)
+		word := DecodeZStringAt(story, story.pos, header)
 		zdict.words = append(zdict.words, word)
 		story.pos += uint16(zdict.entrySize)
 	}
