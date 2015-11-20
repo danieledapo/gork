@@ -26,13 +26,22 @@ func (zstack *ZStack) Top() *ZRoutine {
 type ZMachine struct {
 	header  *ZHeader
 	story   *ZStory
+	objects []*ZObject
 	pc      uint16
 	stack   ZStack
 	quitted bool
 }
 
-func NewZMachine(header *ZHeader, story *ZStory) *ZMachine {
-	return &ZMachine{header: header, story: story, pc: header.pc, quitted: false}
+func NewZMachine(story *ZStory, header *ZHeader) *ZMachine {
+	// cache objects
+	count := ZObjectsCount(story, header)
+	objects := make([]*ZObject, count)
+
+	for i := uint8(1); i <= count; i++ {
+		objects[i] = NewZObject(story, i, header)
+	}
+
+	return &ZMachine{header: header, story: story, pc: header.pc, quitted: false, objects: objects}
 }
 
 func (zm *ZMachine) StoreAt(addr uint16, val uint16) {
