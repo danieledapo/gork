@@ -49,6 +49,15 @@ func (zstory *ZStory) ReadUint32() uint32 {
 	return tmp
 }
 
+func (zstory *ZStory) WriteByteAt(addr uint16, val byte) {
+	zstory.buf[addr] = val
+}
+
+func (zstory *ZStory) WriteWordAt(addr uint16, val uint16) {
+	zstory.buf[addr] = byte(val & 0xF0)
+	zstory.buf[addr+1] = byte(val & 0X0F)
+}
+
 func (zstory *ZStory) String() string {
 	return fmt.Sprintf("buf: %s pos: %d", zstory.buf, zstory.pos)
 }
