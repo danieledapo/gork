@@ -33,7 +33,33 @@ var oneOpFuncs = []OneOpFunc{
 	ZPrintAtPacked,
 }
 
-var twoOpFuncs = []TwoOpFunc{}
+var twoOpFuncs = []TwoOpFunc{
+	ZNOOP,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	ZOr,
+	ZAnd,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	ZAdd,
+	ZSub,
+	ZMul,
+	ZDiv,
+	ZMod,
+}
 
 var varOpFuncs = []VarOpFunc{
 	ZCall,
@@ -114,4 +140,42 @@ func ZPrintChar(zm *ZMachine, args []uint16) {
 	} else if args[0] >= 32 && args[0] <= 126 {
 		fmt.Printf("%c", args[0])
 	} // ignore everything else
+}
+
+func ZAdd(zm *ZMachine, lhs uint16, rhs uint16) {
+	zm.StoreReturn(lhs + rhs)
+}
+
+func ZSub(zm *ZMachine, lhs uint16, rhs uint16) {
+	zm.StoreReturn(lhs - rhs)
+}
+
+func ZMul(zm *ZMachine, lhs uint16, rhs uint16) {
+	zm.StoreReturn(lhs * rhs)
+}
+
+func ZDiv(zm *ZMachine, lhs uint16, rhs uint16) {
+	if rhs == 0 {
+		panic("division by zero error")
+	}
+	zm.StoreReturn(lhs / rhs)
+}
+
+func ZMod(zm *ZMachine, lhs uint16, rhs uint16) {
+	if rhs == 0 {
+		panic("mod by zero error")
+	}
+	zm.StoreReturn(lhs % rhs)
+}
+
+func ZOr(zm *ZMachine, lhs uint16, rhs uint16) {
+	zm.StoreReturn(lhs | rhs)
+}
+
+func ZAnd(zm *ZMachine, lhs uint16, rhs uint16) {
+	zm.StoreReturn(lhs & rhs)
+}
+
+func ZNOOP(_ *ZMachine, _ uint16, _ uint16) {
+	panic("NO OP 2OP")
 }
