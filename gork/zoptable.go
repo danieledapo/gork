@@ -31,6 +31,8 @@ var oneOpFuncs = []OneOpFunc{
 	ZReturn,
 	nil,
 	ZPrintAtPacked,
+	ZLoad,
+	ZNot,
 }
 
 var twoOpFuncs = []TwoOpFunc{
@@ -47,10 +49,10 @@ var twoOpFuncs = []TwoOpFunc{
 	nil,
 	nil,
 	nil,
+	ZStore,
 	nil,
-	nil,
-	nil,
-	nil,
+	ZLoadW,
+	ZLoadB,
 	nil,
 	nil,
 	nil,
@@ -63,12 +65,15 @@ var twoOpFuncs = []TwoOpFunc{
 
 var varOpFuncs = []VarOpFunc{
 	ZCall,
-	nil,
-	nil,
+	ZStoreW,
+	ZStoreB,
 	nil,
 	nil,
 	ZPrintChar,
 	ZPrintNum,
+	nil,
+	ZPush,
+	ZPull,
 }
 
 func ZCall(zm *ZMachine, operands []uint16) {
@@ -90,8 +95,7 @@ func ZCall(zm *ZMachine, operands []uint16) {
 }
 
 func ZReturn(zm *ZMachine, retValue uint16) {
-	zm.pc = zm.stack.Top().retAddr
-	zm.stack.Pop()
+	zm.pc = zm.stack.Pop().retAddr
 
 	zm.StoreReturn(retValue)
 }
@@ -176,6 +180,53 @@ func ZAnd(zm *ZMachine, lhs uint16, rhs uint16) {
 	zm.StoreReturn(lhs & rhs)
 }
 
+// v3
+func ZNot(zm *ZMachine, arg uint16) {
+	zm.StoreReturn(^arg)
+}
+
 func ZNOOP(_ *ZMachine, _ uint16, _ uint16) {
 	panic("NO OP 2OP")
+}
+
+func ZLoad(zm *ZMachine, varnum uint16) {
+	zm.StoreReturn(zm.GetVarAt(varnum))
+}
+
+func ZLoadB(zm *ZMachine, array uint16, bidx uint16) {
+	// TODO access violation
+	zm.StoreReturn(uint16(zm.story.PeekByteAt(array + bidx)))
+}
+
+func ZLoadW(zm *ZMachine, array uint16, widx uint16) {
+	// TODO access violation
+	// index is the index of the nth word
+	zm.StoreReturn(zm.story.PeekWordAt(array + widx*2))
+}
+
+func ZStore(zm *ZMachine, varnum uint16, value uint16) {
+	zm.StoreVarAt(varnum, value)
+}
+
+func ZStoreB(zm *ZMachine, args []uint16) {
+	// TODO access violation
+	addr := args[0] + args[1]
+	zm.story.WriteByteAt(addr, byte(args[2]))
+}
+
+func ZStoreW(zm *ZMachine, args []uint16) {
+	// TODO access violation
+	// index is the index of the nth word
+	addr := args[0] + args[1]*2
+	zm.story.WriteWordAt(addr, args[2])
+}
+
+func ZPush(zm *ZMachine, value uint16) {
+	zm.stack.Top().locals = append(zm.stack.Top().locals, value)
+}
+
+func ZPull(zm *ZMachine) {
+	topLocals := &zm.stack.Top().locals
+	*topLocals = append((*topLocals)[:1], (*topLocals)[1:]...)
+	// should not zm.StoreReturn popped value
 }

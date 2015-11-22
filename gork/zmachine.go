@@ -44,26 +44,39 @@ func NewZMachine(story *ZStory, header *ZHeader) *ZMachine {
 	return &ZMachine{header: header, story: story, pc: header.pc, quitted: false, objects: objects}
 }
 
-func (zm *ZMachine) StoreAt(addr uint16, val uint16) {
-	if addr == 0 {
+func (zm *ZMachine) GetVarAt(varnum uint16) uint16 {
+	if varnum == 0 {
+		// top of stack
+		return zm.stack.Top().locals[len(zm.stack.Top().locals)-1]
+	} else if varnum < 0x10 {
+		// local variable
+		return zm.stack.Top().locals[varnum-1]
+	} else {
+		// global variable
+		return zm.story.PeekWordAt(zm.header.globalsPos + (varnum-0x10)*2)
+	}
+}
+
+func (zm *ZMachine) StoreVarAt(varnum uint16, val uint16) {
+	if varnum == 0 {
 		// push to top of the stack
 		topRoutinelocals := &zm.stack.Top().locals
 		*topRoutinelocals = append(*topRoutinelocals, val)
-	} else if addr < 0x10 {
+	} else if varnum < 0x10 {
 		// local variable
 		// starting from 0
-		zm.stack.Top().locals[addr-1] = val
+		zm.stack.Top().locals[varnum-1] = val
 	} else {
 		// global variable
 		// globals table is a table of 240 words
-		globalAddr := zm.header.globalsPos + (addr-0x10)*2
+		globalAddr := zm.header.globalsPos + (varnum-0x10)*2
 		zm.story.WriteWordAt(globalAddr, val)
 	}
 }
 
 func (zm *ZMachine) StoreReturn(val uint16) {
-	storePos := zm.story.ReadByte()
-	zm.StoreAt(uint16(storePos), val)
+	varnum := zm.story.ReadByte()
+	zm.StoreVarAt(uint16(varnum), val)
 }
 
 func (zm *ZMachine) InterpretAll() {
