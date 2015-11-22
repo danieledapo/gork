@@ -221,11 +221,11 @@ func ZStoreW(zm *ZMachine, args []uint16) {
 	zm.story.WriteWordAt(addr, args[2])
 }
 
-func ZPush(zm *ZMachine, value uint16) {
-	zm.stack.Top().locals = append(zm.stack.Top().locals, value)
+func ZPush(zm *ZMachine, args []uint16) {
+	zm.stack.Top().locals = append(zm.stack.Top().locals, args[0])
 }
 
-func ZPull(zm *ZMachine) {
+func ZPull(zm *ZMachine, _ []uint16) {
 	topLocals := &zm.stack.Top().locals
 	*topLocals = append((*topLocals)[:1], (*topLocals)[1:]...)
 	// should not zm.StoreReturn popped value
