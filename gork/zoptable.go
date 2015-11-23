@@ -86,17 +86,20 @@ func ZCall(zm *ZMachine, operands []uint16) {
 	routineAddr := PackedAddress(operands[0])
 
 	routine := NewZRoutine(zm.story, routineAddr, zm.pc)
-	zm.pc = routineAddr
 
 	zm.stack.Push(routine)
+	// fmt.Println(routine)
 
 	if routineAddr == 0 {
 		ZReturnFalse(zm)
+		return
 	}
 
-	// copy operands to locals
-	for i, v := range operands[1:] {
-		routine.locals[i] = v
+	if len(operands) > 1 {
+		// copy operands to locals
+		for i, v := range operands[1:] {
+			routine.locals[i] = v
+		}
 	}
 }
 

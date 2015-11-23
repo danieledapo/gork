@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	i := flag.Bool("i", true, "show game information in header")
+	i := flag.Bool("i", false, "show game information in header")
 	o := flag.Bool("o", false, "show objects")
 	t := flag.Bool("t", false, "show object tree")
 	a := flag.Bool("a", false, "show abbreviations")

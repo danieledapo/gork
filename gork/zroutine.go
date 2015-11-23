@@ -45,7 +45,7 @@ func (routine *ZRoutine) String() string {
 		for _, local := range routine.locals {
 			tmp += fmt.Sprintf("%X, ", local)
 		}
-		ret += tmp[:len(ret)-2]
+		ret += tmp[:len(tmp)-2]
 	}
 	ret += "]\n"
 

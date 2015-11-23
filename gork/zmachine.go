@@ -83,12 +83,13 @@ func (zm *ZMachine) StoreReturn(val uint16) {
 func (zm *ZMachine) InterpretAll() {
 	for !zm.quitted {
 		zm.Interpret()
+		zm.pc = zm.story.pos
 	}
 }
 
 func (zm *ZMachine) Interpret() {
 	op := NewZOp(zm.story, zm.pc)
-	fmt.Printf("instruction %d class: %d\n", op.opcode, op.class)
+	fmt.Printf("instruction %d class: %d\nPC: %X\n", op.opcode, op.class, zm.pc)
 
 	switch op.class {
 	case ZEROOP:
