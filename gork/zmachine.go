@@ -38,7 +38,8 @@ func NewZMachine(story *ZStory, header *ZHeader) *ZMachine {
 	objects := make([]*ZObject, count)
 
 	for i := uint8(1); i <= count; i++ {
-		objects[i] = NewZObject(story, i, header)
+		// objects are 1-based
+		objects[i-1] = NewZObject(story, i, header)
 	}
 
 	return &ZMachine{header: header, story: story, pc: header.pc, quitted: false, objects: objects}
@@ -87,6 +88,7 @@ func (zm *ZMachine) InterpretAll() {
 
 func (zm *ZMachine) Interpret() {
 	op := NewZOp(zm.story, zm.pc)
+	fmt.Printf("instruction %d class: %d\n", op.opcode, op.class)
 
 	switch op.class {
 	case ZEROOP:

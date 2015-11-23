@@ -46,5 +46,7 @@ func main() {
 		fmt.Println(gork.NewZDictionary(story, header))
 	}
 
+	gork.NewZMachine(story, header).InterpretAll()
+
 	fmt.Println("")
 }

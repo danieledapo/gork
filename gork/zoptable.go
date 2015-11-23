@@ -14,6 +14,12 @@ var zeroOpFuncs = []ZeroOpFunc{
 	ZReturnFalse,
 	ZPrint,
 	ZPrintRet,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	ZPop,
 }
 
 var oneOpFuncs = []OneOpFunc{
@@ -77,26 +83,25 @@ var varOpFuncs = []VarOpFunc{
 }
 
 func ZCall(zm *ZMachine, operands []uint16) {
-	routineAddr := PackedAddress(uint16(zm.story.ReadByte()))
+	routineAddr := PackedAddress(operands[0])
+
+	routine := NewZRoutine(zm.story, routineAddr, zm.pc)
+	zm.pc = routineAddr
+
+	zm.stack.Push(routine)
 
 	if routineAddr == 0 {
-		zm.stack.Push(nil) // removed by following
 		ZReturnFalse(zm)
 	}
 
-	routine := NewZRoutine(zm.story, routineAddr, zm.pc)
 	// copy operands to locals
-	for i, v := range operands {
+	for i, v := range operands[1:] {
 		routine.locals[i] = v
 	}
-
-	zm.pc = routineAddr
-	zm.stack.Push(routine)
 }
 
 func ZReturn(zm *ZMachine, retValue uint16) {
 	zm.pc = zm.stack.Pop().retAddr
-
 	zm.StoreReturn(retValue)
 }
 
@@ -121,7 +126,8 @@ func ZPrintRet(zm *ZMachine) {
 }
 
 func ZPrintObject(zm *ZMachine, obj uint16) {
-	fmt.Print(zm.objects[obj].name)
+	// objects are 1-based
+	fmt.Print(zm.objects[obj-1].name)
 }
 
 func ZPrintAt(zm *ZMachine, addr uint16) {
@@ -225,8 +231,14 @@ func ZPush(zm *ZMachine, args []uint16) {
 	zm.stack.Top().locals = append(zm.stack.Top().locals, args[0])
 }
 
-func ZPull(zm *ZMachine, _ []uint16) {
+func ZPull(zm *ZMachine, args []uint16) {
+	varnum := byte(args[0]) - 1
+	topLocals := &zm.stack.Top().locals
+	*topLocals = append((*topLocals)[:varnum], (*topLocals)[varnum:]...)
+	// should not zm.StoreReturn popped value
+}
+
+func ZPop(zm *ZMachine) {
 	topLocals := &zm.stack.Top().locals
 	*topLocals = append((*topLocals)[:1], (*topLocals)[1:]...)
-	// should not zm.StoreReturn popped value
 }
