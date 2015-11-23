@@ -85,10 +85,11 @@ var varOpFuncs = []VarOpFunc{
 func ZCall(zm *ZMachine, operands []uint16) {
 	routineAddr := PackedAddress(operands[0])
 
-	routine := NewZRoutine(zm.story, routineAddr, zm.pc)
+	zm.seq.pos = routineAddr
+	routine := NewZRoutine(zm.seq, zm.seq.pos)
 
 	zm.stack.Push(routine)
-	// fmt.Println(routine)
+	fmt.Println(routine)
 
 	if routineAddr == 0 {
 		ZReturnFalse(zm)
@@ -104,7 +105,7 @@ func ZCall(zm *ZMachine, operands []uint16) {
 }
 
 func ZReturn(zm *ZMachine, retValue uint16) {
-	zm.pc = zm.stack.Pop().retAddr
+	zm.seq.pos = zm.stack.Pop().retAddr
 	zm.StoreReturn(retValue)
 }
 
@@ -117,8 +118,7 @@ func ZReturnTrue(zm *ZMachine) {
 }
 
 func ZPrint(zm *ZMachine) {
-	str := DecodeZString(zm.story, zm.header)
-	zm.pc += zm.story.pos
+	str := zm.seq.DecodeZString(zm.header)
 	fmt.Print(str)
 }
 
@@ -134,7 +134,7 @@ func ZPrintObject(zm *ZMachine, obj uint16) {
 }
 
 func ZPrintAt(zm *ZMachine, addr uint16) {
-	str := DecodeZStringAt(zm.story, addr, zm.header)
+	str := zm.seq.mem.DecodeZStringAt(addr, zm.header)
 	fmt.Print(str)
 }
 
@@ -204,13 +204,13 @@ func ZLoad(zm *ZMachine, varnum uint16) {
 
 func ZLoadB(zm *ZMachine, array uint16, bidx uint16) {
 	// TODO access violation
-	zm.StoreReturn(uint16(zm.story.PeekByteAt(array + bidx)))
+	zm.StoreReturn(uint16(zm.seq.mem.ByteAt(array + bidx)))
 }
 
 func ZLoadW(zm *ZMachine, array uint16, widx uint16) {
 	// TODO access violation
 	// index is the index of the nth word
-	zm.StoreReturn(zm.story.PeekWordAt(array + widx*2))
+	zm.StoreReturn(zm.seq.mem.WordAt(array + widx*2))
 }
 
 func ZStore(zm *ZMachine, varnum uint16, value uint16) {
@@ -220,14 +220,14 @@ func ZStore(zm *ZMachine, varnum uint16, value uint16) {
 func ZStoreB(zm *ZMachine, args []uint16) {
 	// TODO access violation
 	addr := args[0] + args[1]
-	zm.story.WriteByteAt(addr, byte(args[2]))
+	zm.seq.mem.WriteByteAt(addr, byte(args[2]))
 }
 
 func ZStoreW(zm *ZMachine, args []uint16) {
 	// TODO access violation
 	// index is the index of the nth word
 	addr := args[0] + args[1]*2
-	zm.story.WriteWordAt(addr, args[2])
+	zm.seq.mem.WriteWordAt(addr, args[2])
 }
 
 func ZPush(zm *ZMachine, args []uint16) {

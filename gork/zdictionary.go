@@ -11,25 +11,26 @@ type ZDictionary struct {
 	// ignore words data, it looks like they are useless to interpreters
 }
 
-func NewZDictionary(story *ZStory, header *ZHeader) *ZDictionary {
+func NewZDictionary(mem *ZMemory, header *ZHeader) *ZDictionary {
 	zdict := new(ZDictionary)
 
-	story.pos = header.dictPos
-	n := story.ReadByte()
+	seq := mem.GetSequential(header.dictPos)
+
+	n := seq.ReadByte()
 
 	for i := uint8(0); i < n; i++ {
-		wordSep := story.ReadByte()
+		wordSep := seq.ReadByte()
 		zdict.wordSeparators = append(zdict.wordSeparators, wordSep)
 	}
 
-	zdict.entrySize = story.ReadByte()
+	zdict.entrySize = seq.ReadByte()
 
-	entryCount := story.ReadWord()
+	entryCount := seq.ReadWord()
 
 	for i := uint16(0); i < entryCount; i++ {
-		word := DecodeZStringAt(story, story.pos, header)
+		word := mem.DecodeZStringAt(seq.pos, header)
 		zdict.words = append(zdict.words, word)
-		story.pos += uint16(zdict.entrySize)
+		seq.pos += uint16(zdict.entrySize)
 	}
 
 	return zdict

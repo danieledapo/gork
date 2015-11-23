@@ -13,7 +13,7 @@ const (
 
 type ZObject struct {
 	number        uint8
-	attributes    []byte //v3 never gonna be more than 32
+	attributes    [32]bool //v3 never gonna be more than 32
 	parent        byte
 	sibling       byte
 	child         byte
@@ -22,66 +22,67 @@ type ZObject struct {
 	properties    map[byte][]byte
 }
 
-func NewZObject(story *ZStory, number uint8, header *ZHeader) *ZObject {
+func NewZObject(mem *ZMemory, number uint8, header *ZHeader) *ZObject {
 	obj := new(ZObject)
-	obj.configure(story, number, header)
+	obj.configure(mem, number, header)
 	return obj
 }
 
-func (obj *ZObject) configure(story *ZStory, number uint8, header *ZHeader) {
+func (obj *ZObject) configure(mem *ZMemory, number uint8, header *ZHeader) {
 	obj.number = number
 
-	story.pos = ZObjectAddress(number, header)
+	seq := mem.GetSequential(ZObjectAddress(number, header))
 
 	// v3 attributes is 32 bit
 	// more significant bit <-> attribute # smaller
 	//
 	// Bit  #  0 1 2 3 4 5 6 7
 	// Attr #  7 6 5 4 3 2 1 0
-	attr := story.ReadUint32()
+	attr := seq.ReadUint32()
 	for i := 3; i >= 0; i-- {
 		byteno := uint8(3 - i)
 		bits := uint8(attr >> (uint8(i) * 8))
 		for j := 7; j >= 0; j-- {
-			if (bits>>uint8(j))&0x01 == 0x01 {
-				obj.attributes = append(obj.attributes, byteno*8+7-uint8(j))
-			}
+			obj.attributes[byteno*8+7-uint8(j)] = (bits>>uint8(j))&0x01 == 0x01
+			// if (bits>>uint8(j))&0x01 == 0x01 {
+			// 	obj.attributes = append(obj.attributes, byteno*8+7-uint8(j))
+			// }
 		}
 	}
 
-	obj.parent = story.ReadByte()
-	obj.sibling = story.ReadByte()
-	obj.child = story.ReadByte()
-	obj.propertiesPos = story.ReadWord()
+	obj.parent = seq.ReadByte()
+	obj.sibling = seq.ReadByte()
+	obj.child = seq.ReadByte()
+	obj.propertiesPos = seq.ReadWord()
 
-	obj.readProperties(story, header)
+	obj.readProperties(mem, header)
 }
 
-func (obj *ZObject) readProperties(story *ZStory, header *ZHeader) {
+func (obj *ZObject) readProperties(mem *ZMemory, header *ZHeader) {
 	// v3
 
 	obj.properties = make(map[byte][]byte)
 
-	story.pos = obj.propertiesPos
+	seq := mem.GetSequential(obj.propertiesPos)
 
 	// number of words
-	textLength := uint16(story.ReadByte())
+	textLength := uint16(seq.ReadByte())
 	if textLength != 0 {
-		obj.name = string(DecodeZStringAt(story, obj.propertiesPos+1, header))
+		obj.name = string(mem.DecodeZStringAt(obj.propertiesPos+1, header))
 	}
 
-	story.pos = obj.propertiesPos + 1 + textLength*2
+	seq.pos = obj.propertiesPos + 1 + textLength*2
 
-	dataSize := story.ReadByte()
+	dataSize := seq.ReadByte()
 	for dataSize > 0 {
 		prop := dataSize & (0x20 - 1)
 		count := ((dataSize & 0xE0) >> 5) + 1
 
 		for i := byte(0); i < count; i++ {
 			obj.properties[prop] = append(obj.properties[prop],
-				story.ReadByte())
+				seq.ReadByte())
 		}
-		dataSize = story.ReadByte()
+		dataSize = seq.ReadByte()
 	}
 }
 
@@ -93,18 +94,20 @@ func ZObjectAddress(idx uint8, header *ZHeader) uint16 {
 	return uint16(header.objTblPos) + 31*2 + uint16(idx-1)*uint16(zobjectSize)
 }
 
-func ZObjectsCount(story *ZStory, header *ZHeader) uint8 {
+func ZObjectsCount(mem *ZMemory, header *ZHeader) uint8 {
 	count := uint8(0)
 	firstPropertyPos := uint16(0)
 
+	seq := mem.GetSequential(ZObjectAddress(1, header))
+
 	doCount := func() {
 		count++
-		story.pos = ZObjectAddress(count, header)
+		seq.pos = ZObjectAddress(count, header)
 
-		if firstPropertyPos == 0 || story.pos < firstPropertyPos {
-			story.pos += propertyOffset
+		if firstPropertyPos == 0 || seq.pos < firstPropertyPos {
+			seq.pos += propertyOffset
 
-			propertyPos := story.PeekWord()
+			propertyPos := seq.PeekWord()
 			if firstPropertyPos == 0 || propertyPos < firstPropertyPos {
 				firstPropertyPos = propertyPos
 			}
@@ -118,7 +121,7 @@ func ZObjectsCount(story *ZStory, header *ZHeader) uint8 {
 	// object #N
 	// object #1 properties
 	doCount()
-	for story.pos < firstPropertyPos {
+	for seq.pos < firstPropertyPos {
 		doCount()
 	}
 
@@ -131,9 +134,10 @@ func (obj *ZObject) String() string {
 
 	ret += fmt.Sprintf("Attributes: ")
 	if len(obj.attributes) > 0 {
-		// ret += fmt.Sprintf("%d\n", obj.attributes)
-		for _, attr := range obj.attributes {
-			ret += fmt.Sprintf("%d, ", attr)
+		for i, attr := range obj.attributes {
+			if attr {
+				ret += fmt.Sprintf("%d, ", i)
+			}
 		}
 		// do not include " ,"
 		ret = ret[:len(ret)-2]
@@ -169,22 +173,22 @@ func (obj *ZObject) String() string {
 	return ret
 }
 
-func DumpAllZObjects(story *ZStory, header *ZHeader) {
-	total := ZObjectsCount(story, header)
+func DumpAllZObjects(mem *ZMemory, header *ZHeader) {
+	total := ZObjectsCount(mem, header)
 
 	fmt.Print("\n    **** Objects ****\n\n")
 	fmt.Printf("  Object count = %d\n\n", total)
 
 	for i := uint8(1); i <= total; i++ {
-		fmt.Printf("%3d. %s", i, NewZObject(story, i, header))
+		fmt.Printf("%3d. %s", i, NewZObject(mem, i, header))
 	}
 }
 
-func DumpZObjectsTree(story *ZStory, header *ZHeader) {
+func DumpZObjectsTree(mem *ZMemory, header *ZHeader) {
 
 	fmt.Print("\n    **** Object tree ****\n\n")
 
-	total := ZObjectsCount(story, header)
+	total := ZObjectsCount(mem, header)
 
 	var printObject func(obj *ZObject, depth int)
 	printObject = func(obj *ZObject, depth int) {
@@ -197,19 +201,19 @@ func DumpZObjectsTree(story *ZStory, header *ZHeader) {
 			fmt.Printf("\"%s\"\n", obj.name)
 
 			if obj.child != 0 {
-				childobj := NewZObject(story, obj.child, header)
+				childobj := NewZObject(mem, obj.child, header)
 				printObject(childobj, depth+1)
 			}
 
 			if obj.sibling == 0 {
 				break
 			}
-			obj = NewZObject(story, obj.sibling, header)
+			obj = NewZObject(mem, obj.sibling, header)
 		}
 	}
 
 	for i := uint8(1); i <= total; i++ {
-		zobj := NewZObject(story, i, header)
+		zobj := NewZObject(mem, i, header)
 
 		// root
 		if zobj.parent == 0 {

@@ -11,30 +11,30 @@ type ZRoutine struct {
 	locals  []uint16
 }
 
-func NewZRoutine(story *ZStory, addr uint16, retAddr uint16) *ZRoutine {
-	if !IsPackedAddress(addr) {
+func NewZRoutine(seq *ZMemorySequential, retAddr uint16) *ZRoutine {
+	if !IsPackedAddress(seq.pos) {
 		panic("attempt to read routine at non packed address")
 	}
 
-	story.pos = addr
+	// seq := mem.GetSequential(addr)
 
 	routine := new(ZRoutine)
 	routine.retAddr = retAddr
 
-	routine.addr = addr
-	numLocals := story.ReadByte()
+	routine.addr = seq.pos
+	numLocals := seq.ReadByte()
 
 	routine.locals = make([]uint16, numLocals)
 
 	for i := byte(0); i < numLocals; i++ {
-		routine.locals[i] = story.ReadWord()
+		routine.locals[i] = seq.ReadWord()
 	}
 
 	return routine
 }
 
-func MainRoutine(story *ZStory, header *ZHeader) *ZRoutine {
-	return NewZRoutine(story, PackedAddress(header.pc), 0)
+func MainRoutine(mem *ZMemory, header *ZHeader) *ZRoutine {
+	return NewZRoutine(mem.GetSequential(PackedAddress(header.pc)), 0)
 }
 
 func (routine *ZRoutine) String() string {

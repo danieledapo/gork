@@ -20,33 +20,33 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	story := gork.NewZStory(buf)
+	mem := gork.NewZMemory(buf)
 
 	fmt.Println("\nStory file is zork1.z5")
 
-	header := gork.NewZHeader(story)
+	header := gork.NewZHeader(mem)
 
 	if *i {
 		fmt.Println(header)
 	}
 
 	if *o {
-		gork.DumpAllZObjects(story, header)
+		gork.DumpAllZObjects(mem, header)
 	}
 
 	if *t {
-		gork.DumpZObjectsTree(story, header)
+		gork.DumpZObjectsTree(mem, header)
 	}
 
 	if *a {
-		gork.DumpAbbreviations(story, header)
+		gork.DumpAbbreviations(mem, header)
 	}
 
 	if *d {
-		fmt.Println(gork.NewZDictionary(story, header))
+		fmt.Println(gork.NewZDictionary(mem, header))
 	}
 
-	gork.NewZMachine(story, header).InterpretAll()
+	gork.NewZMachine(mem, header).InterpretAll()
 
 	fmt.Println("")
 }

@@ -27,84 +27,84 @@ type ZHeader struct {
 	fileChecksum uint16
 }
 
-func NewZHeader(story *ZStory) *ZHeader {
+func NewZHeader(mem *ZMemory) *ZHeader {
 	zmem := new(ZHeader)
-	zmem.configure(story)
+	zmem.configure(mem)
 	return zmem
 }
 
-func (zmem *ZHeader) configure(story *ZStory) {
-	story.pos = 0
+func (header *ZHeader) configure(mem *ZMemory) {
+	seq := mem.GetSequential(0)
 
-	zmem.version = story.ReadByte()
+	header.version = seq.ReadByte()
 
-	if zmem.version > 3 {
+	if header.version > 3 {
 		panic("versions > 3 are not supported!")
 	}
 
-	zmem.config = story.ReadByte()
-	zmem.release = story.ReadWord()
+	header.config = seq.ReadByte()
+	header.release = seq.ReadWord()
 
-	zmem.highStart = story.ReadWord()
+	header.highStart = seq.ReadWord()
 
-	zmem.pc = story.ReadWord()
+	header.pc = seq.ReadWord()
 
-	zmem.dictPos = story.ReadWord()
-	zmem.objTblPos = story.ReadWord()
-	zmem.globalsPos = story.ReadWord()
+	header.dictPos = seq.ReadWord()
+	header.objTblPos = seq.ReadWord()
+	header.globalsPos = seq.ReadWord()
 
-	zmem.dynMemSize = story.ReadWord()
+	header.dynMemSize = seq.ReadWord()
 
-	if zmem.dynMemSize < 64 {
+	if header.dynMemSize < 64 {
 		panic("dynamic size cannot be < 64 bytes")
 	}
 
-	if zmem.highStart < zmem.dynMemSize {
-		panic("invalid story: high memory must not overlap dynamic memory")
+	if header.highStart < header.dynMemSize {
+		panic("invalid mem: high memory must not overlap dynamic memory")
 	}
 
 	// who cares if dynMemSize + staticMemorySize(min(0xFFFF, fileSize)) < 64KB ?
 
-	story.pos = 0x12
+	seq.pos = 0x12
 	for i := 0; i < SerialSize; i++ {
-		zmem.serial[i] = story.ReadByte()
+		header.serial[i] = seq.ReadByte()
 	}
 
-	zmem.abbrTblPos = story.ReadWord()
+	header.abbrTblPos = seq.ReadWord()
 
 	// v3
-	zmem.fileLength = uint64(story.ReadWord()) * 2
+	header.fileLength = uint64(seq.ReadWord()) * 2
 
 	// v3 max file length 128K
-	if zmem.fileLength > 128*1024 {
-		panic("story file too big!")
+	if header.fileLength > 128*1024 {
+		panic("mem file too big!")
 	}
 
-	zmem.fileChecksum = story.ReadWord()
+	header.fileChecksum = seq.ReadWord()
 }
 
-func (zmem *ZHeader) String() string {
+func (header *ZHeader) String() string {
 	ret := "\n    **** Story file header ****\n\n"
-	ret += fmt.Sprintf("  Z-code version:           %d\n", zmem.version)
+	ret += fmt.Sprintf("  Z-code version:           %d\n", header.version)
 
 	ret += fmt.Sprint("  Interpreter flags:        ")
-	if zmem.config&0x01 == 0x01 {
+	if header.config&0x01 == 0x01 {
 		ret += fmt.Sprintln("Display hours:min")
 	} else {
 		ret += fmt.Sprintln("Display score/turns")
 	}
 
-	ret += fmt.Sprintf("  Release number:           %d\n", zmem.release)
-	ret += fmt.Sprintf("  Size of resident memory:  %04x\n", zmem.highStart)
-	ret += fmt.Sprintf("  Start PC:                 %04x\n", zmem.pc)
-	ret += fmt.Sprintf("  Dictionary address:       %04x\n", zmem.dictPos)
-	ret += fmt.Sprintf("  Object table address:     %04x\n", zmem.objTblPos)
-	ret += fmt.Sprintf("  Global variables address: %04x\n", zmem.globalsPos)
-	ret += fmt.Sprintf("  Size of dynamic memory:   %04x\n", zmem.dynMemSize)
-	ret += fmt.Sprintf("  Serial number:            %c%c%c%c%c%c\n", zmem.serial[0], zmem.serial[1], zmem.serial[2], zmem.serial[3], zmem.serial[4], zmem.serial[5])
-	ret += fmt.Sprintf("  Abbreviations address:    %04x\n", zmem.abbrTblPos)
-	ret += fmt.Sprintf("  File size:                %05x\n", zmem.fileLength)
-	ret += fmt.Sprintf("  Checksum:                 %04x\n", zmem.fileChecksum)
+	ret += fmt.Sprintf("  Release number:           %d\n", header.release)
+	ret += fmt.Sprintf("  Size of resident memory:  %04x\n", header.highStart)
+	ret += fmt.Sprintf("  Start PC:                 %04x\n", header.pc)
+	ret += fmt.Sprintf("  Dictionary address:       %04x\n", header.dictPos)
+	ret += fmt.Sprintf("  Object table address:     %04x\n", header.objTblPos)
+	ret += fmt.Sprintf("  Global variables address: %04x\n", header.globalsPos)
+	ret += fmt.Sprintf("  Size of dynamic memory:   %04x\n", header.dynMemSize)
+	ret += fmt.Sprintf("  Serial number:            %c%c%c%c%c%c\n", header.serial[0], header.serial[1], header.serial[2], header.serial[3], header.serial[4], header.serial[5])
+	ret += fmt.Sprintf("  Abbreviations address:    %04x\n", header.abbrTblPos)
+	ret += fmt.Sprintf("  File size:                %05x\n", header.fileLength)
+	ret += fmt.Sprintf("  Checksum:                 %04x\n", header.fileChecksum)
 
 	return ret
 }

@@ -24,25 +24,25 @@ func (zstack *ZStack) Top() *ZRoutine {
 }
 
 type ZMachine struct {
-	header  *ZHeader
-	story   *ZStory
+	header *ZHeader
+	// pc is mem.pos
+	seq     *ZMemorySequential
 	objects []*ZObject
-	pc      uint16
 	stack   ZStack
 	quitted bool
 }
 
-func NewZMachine(story *ZStory, header *ZHeader) *ZMachine {
+func NewZMachine(mem *ZMemory, header *ZHeader) *ZMachine {
 	// cache objects
-	count := ZObjectsCount(story, header)
+	count := ZObjectsCount(mem, header)
 	objects := make([]*ZObject, count)
 
 	for i := uint8(1); i <= count; i++ {
 		// objects are 1-based
-		objects[i-1] = NewZObject(story, i, header)
+		objects[i-1] = NewZObject(mem, i, header)
 	}
 
-	return &ZMachine{header: header, story: story, pc: header.pc, quitted: false, objects: objects}
+	return &ZMachine{header: header, seq: mem.GetSequential(header.pc), quitted: false, objects: objects}
 }
 
 func (zm *ZMachine) GetVarAt(varnum uint16) uint16 {
@@ -54,7 +54,7 @@ func (zm *ZMachine) GetVarAt(varnum uint16) uint16 {
 		return zm.stack.Top().locals[varnum-1]
 	} else {
 		// global variable
-		return zm.story.PeekWordAt(zm.header.globalsPos + (varnum-0x10)*2)
+		return zm.seq.mem.WordAt(zm.header.globalsPos + (varnum-0x10)*2)
 	}
 }
 
@@ -71,25 +71,24 @@ func (zm *ZMachine) StoreVarAt(varnum uint16, val uint16) {
 		// global variable
 		// globals table is a table of 240 words
 		globalAddr := zm.header.globalsPos + (varnum-0x10)*2
-		zm.story.WriteWordAt(globalAddr, val)
+		zm.seq.mem.WriteWordAt(globalAddr, val)
 	}
 }
 
 func (zm *ZMachine) StoreReturn(val uint16) {
-	varnum := zm.story.ReadByte()
+	varnum := zm.seq.ReadByte()
 	zm.StoreVarAt(uint16(varnum), val)
 }
 
 func (zm *ZMachine) InterpretAll() {
 	for !zm.quitted {
 		zm.Interpret()
-		zm.pc = zm.story.pos
 	}
 }
 
 func (zm *ZMachine) Interpret() {
-	op := NewZOp(zm.story, zm.pc)
-	fmt.Printf("instruction %d class: %d\nPC: %X\n", op.opcode, op.class, zm.pc)
+	op := NewZOp(zm.seq)
+	fmt.Printf("instruction %d class: %d\nPC: %X\n", op.opcode, op.class, zm.seq.pos)
 
 	switch op.class {
 	case ZEROOP:
@@ -107,7 +106,7 @@ func (zm *ZMachine) String() string {
 	// not properly formatted
 	ret := ""
 
-	ret += fmt.Sprintf("PC: %X\n", zm.pc)
+	ret += fmt.Sprintf("PC: %X\n", zm.seq.pos)
 	ret += fmt.Sprintf("Stack: %s\n", zm.stack)
 	ret += fmt.Sprintf("Quitted: %b\n", zm.quitted)
 

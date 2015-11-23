@@ -34,12 +34,10 @@ type ZOp struct {
 	// - text   	zstring
 }
 
-func NewZOp(story *ZStory, addr uint16) *ZOp {
+func NewZOp(seq *ZMemorySequential) *ZOp {
 	zop := new(ZOp)
 
-	story.pos = addr
-
-	opcode := story.ReadByte()
+	opcode := seq.ReadByte()
 
 	if opcode < 0x80 {
 		zop.class = TWOOP
@@ -53,18 +51,18 @@ func NewZOp(story *ZStory, addr uint16) *ZOp {
 
 	switch opcode >> 6 {
 	case 0x03:
-		zop.configureVar(story, opcode)
+		zop.configureVar(seq, opcode)
 	case 0x02:
-		zop.configureShort(story, opcode)
+		zop.configureShort(seq, opcode)
 	default:
-		zop.configureLong(story, opcode)
+		zop.configureLong(seq, opcode)
 		// v3 ignore EXTENDED
 	}
 
 	return zop
 }
 
-func (zop *ZOp) configureVar(story *ZStory, op byte) {
+func (zop *ZOp) configureVar(seq *ZMemorySequential, op byte) {
 	// opcode is stored in the bottom 5 bits
 	zop.opcode = op & 0x1F
 
@@ -72,7 +70,7 @@ func (zop *ZOp) configureVar(story *ZStory, op byte) {
 	// 2 bits per type
 	// bits #7 #6 are first operand's type
 	// bits #1 #0 are last operand's type
-	types := story.ReadByte()
+	types := seq.ReadByte()
 
 	mask := byte(0xC0)
 	for ; mask > 0; mask = mask >> 2 {
@@ -81,7 +79,7 @@ func (zop *ZOp) configureVar(story *ZStory, op byte) {
 			break
 		}
 		zop.optypes = append(zop.optypes, ty)
-		zop.operands = append(zop.operands, readOpType(story, ty))
+		zop.operands = append(zop.operands, readOpType(seq, ty))
 	}
 
 	for ; mask > 0; mask = mask >> 2 {
@@ -95,7 +93,7 @@ func (zop *ZOp) configureVar(story *ZStory, op byte) {
 	}
 }
 
-func (zop *ZOp) configureShort(story *ZStory, op byte) {
+func (zop *ZOp) configureShort(seq *ZMemorySequential, op byte) {
 	// opcode is stored in the bottom 4 bits
 	zop.opcode = op & 0x0F
 
@@ -105,11 +103,11 @@ func (zop *ZOp) configureShort(story *ZStory, op byte) {
 
 		// optype is stored in bits #4 #5
 		zop.optypes[0] = op & 0x18
-		zop.operands[0] = readOpType(story, zop.optypes[0])
+		zop.operands[0] = readOpType(seq, zop.optypes[0])
 	} // ignore ZEROOP
 }
 
-func (zop *ZOp) configureLong(story *ZStory, op byte) {
+func (zop *ZOp) configureLong(seq *ZMemorySequential, op byte) {
 	// always 2OP
 	// opcode is stored in the bottom 5 bits
 	zop.opcode = op & 0x1F
@@ -127,15 +125,15 @@ func (zop *ZOp) configureLong(story *ZStory, op byte) {
 		} else {
 			zop.optypes[i] = VARIABLE_CONSTANT
 		}
-		zop.operands[i] = readOpType(story, zop.optypes[i])
+		zop.operands[i] = readOpType(seq, zop.optypes[i])
 	}
 }
 
-func readOpType(story *ZStory, optype byte) uint16 {
+func readOpType(seq *ZMemorySequential, optype byte) uint16 {
 	if optype == LARGE_CONSTANT {
-		return story.ReadWord()
+		return seq.ReadWord()
 	} else {
-		return uint16(story.ReadByte())
+		return uint16(seq.ReadByte())
 	}
 }
 
