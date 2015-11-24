@@ -21,6 +21,7 @@ const (
 )
 
 type ZOp struct {
+	zm       *ZMachine
 	opcode   byte
 	class    byte
 	optypes  []byte
@@ -34,10 +35,12 @@ type ZOp struct {
 	// - text   	zstring
 }
 
-func NewZOp(seq *ZMemorySequential) *ZOp {
+func NewZOp(zm *ZMachine) *ZOp {
 	zop := new(ZOp)
 
-	opcode := seq.ReadByte()
+	zop.zm = zm
+
+	opcode := zm.seq.ReadByte()
 
 	if opcode < 0x80 {
 		zop.class = TWOOP
@@ -51,18 +54,18 @@ func NewZOp(seq *ZMemorySequential) *ZOp {
 
 	switch opcode >> 6 {
 	case 0x03:
-		zop.configureVar(seq, opcode)
+		zop.configureVar(opcode)
 	case 0x02:
-		zop.configureShort(seq, opcode)
+		zop.configureShort(opcode)
 	default:
-		zop.configureLong(seq, opcode)
+		zop.configureLong(opcode)
 		// v3 ignore EXTENDED
 	}
 
 	return zop
 }
 
-func (zop *ZOp) configureVar(seq *ZMemorySequential, op byte) {
+func (zop *ZOp) configureVar(op byte) {
 	// opcode is stored in the bottom 5 bits
 	zop.opcode = op & 0x1F
 
@@ -70,7 +73,7 @@ func (zop *ZOp) configureVar(seq *ZMemorySequential, op byte) {
 	// 2 bits per type
 	// bits #7 #6 are first operand's type
 	// bits #1 #0 are last operand's type
-	types := seq.ReadByte()
+	types := zop.zm.seq.ReadByte()
 
 	mask := byte(0xC0)
 	for ; mask > 0; mask = mask >> 2 {
@@ -79,7 +82,7 @@ func (zop *ZOp) configureVar(seq *ZMemorySequential, op byte) {
 			break
 		}
 		zop.optypes = append(zop.optypes, ty)
-		zop.operands = append(zop.operands, readOpType(seq, ty))
+		zop.operands = append(zop.operands, zop.readOpType(ty))
 	}
 
 	for ; mask > 0; mask = mask >> 2 {
@@ -93,7 +96,7 @@ func (zop *ZOp) configureVar(seq *ZMemorySequential, op byte) {
 	}
 }
 
-func (zop *ZOp) configureShort(seq *ZMemorySequential, op byte) {
+func (zop *ZOp) configureShort(op byte) {
 	// opcode is stored in the bottom 4 bits
 	zop.opcode = op & 0x0F
 
@@ -103,11 +106,11 @@ func (zop *ZOp) configureShort(seq *ZMemorySequential, op byte) {
 
 		// optype is stored in bits #4 #5
 		zop.optypes[0] = op & 0x18
-		zop.operands[0] = readOpType(seq, zop.optypes[0])
+		zop.operands[0] = zop.readOpType(zop.optypes[0])
 	} // ignore ZEROOP
 }
 
-func (zop *ZOp) configureLong(seq *ZMemorySequential, op byte) {
+func (zop *ZOp) configureLong(op byte) {
 	// always 2OP
 	// opcode is stored in the bottom 5 bits
 	zop.opcode = op & 0x1F
@@ -119,21 +122,26 @@ func (zop *ZOp) configureLong(seq *ZMemorySequential, op byte) {
 	// the type of operand #2 is in bit #5
 	// if bit == 0 then type is SMALL_CONSTANT,
 	// 		otherwise it is VARIABLE_CONSTANT
-	for i := uint8(0); i < 2; i++ {
-		if zop.opcode&(0x20>>i) == 0x00 {
+	for i := byte(0); i < 2; i++ {
+		bit := op >> (6 - i) & 0x01
+		if bit == 0x00 {
 			zop.optypes[i] = SMALL_CONSTANT
 		} else {
 			zop.optypes[i] = VARIABLE_CONSTANT
 		}
-		zop.operands[i] = readOpType(seq, zop.optypes[i])
+
+		zop.operands[i] = zop.readOpType(zop.optypes[i])
 	}
 }
 
-func readOpType(seq *ZMemorySequential, optype byte) uint16 {
+func (zop *ZOp) readOpType(optype byte) uint16 {
 	if optype == LARGE_CONSTANT {
-		return seq.ReadWord()
+		return zop.zm.seq.ReadWord()
+	} else if optype == VARIABLE_CONSTANT {
+		tmp := zop.zm.GetVarAt(zop.zm.seq.ReadByte())
+		return tmp
 	} else {
-		return uint16(seq.ReadByte())
+		return uint16(zop.zm.seq.ReadByte())
 	}
 }
 

@@ -45,7 +45,7 @@ func NewZMachine(mem *ZMemory, header *ZHeader) *ZMachine {
 	return &ZMachine{header: header, seq: mem.GetSequential(header.pc), quitted: false, objects: objects}
 }
 
-func (zm *ZMachine) GetVarAt(varnum uint16) uint16 {
+func (zm *ZMachine) GetVarAt(varnum byte) uint16 {
 	if varnum == 0 {
 		// top of stack
 		return zm.stack.Top().locals[len(zm.stack.Top().locals)-1]
@@ -54,11 +54,11 @@ func (zm *ZMachine) GetVarAt(varnum uint16) uint16 {
 		return zm.stack.Top().locals[varnum-1]
 	} else {
 		// global variable
-		return zm.seq.mem.WordAt(zm.header.globalsPos + (varnum-0x10)*2)
+		return zm.seq.mem.WordAt(zm.header.globalsPos + (uint16(varnum)-0x10)*2)
 	}
 }
 
-func (zm *ZMachine) StoreVarAt(varnum uint16, val uint16) {
+func (zm *ZMachine) StoreVarAt(varnum byte, val uint16) {
 	if varnum == 0 {
 		// push to top of the stack
 		topRoutinelocals := &zm.stack.Top().locals
@@ -70,14 +70,14 @@ func (zm *ZMachine) StoreVarAt(varnum uint16, val uint16) {
 	} else {
 		// global variable
 		// globals table is a table of 240 words
-		globalAddr := zm.header.globalsPos + (varnum-0x10)*2
+		globalAddr := zm.header.globalsPos + uint16(varnum-0x10)*2
 		zm.seq.mem.WriteWordAt(globalAddr, val)
 	}
 }
 
 func (zm *ZMachine) StoreReturn(val uint16) {
 	varnum := zm.seq.ReadByte()
-	zm.StoreVarAt(uint16(varnum), val)
+	zm.StoreVarAt(varnum, val)
 }
 
 func (zm *ZMachine) InterpretAll() {
@@ -87,8 +87,8 @@ func (zm *ZMachine) InterpretAll() {
 }
 
 func (zm *ZMachine) Interpret() {
-	op := NewZOp(zm.seq)
-	fmt.Printf("instruction %d class: %d\nPC: %X\n", op.opcode, op.class, zm.seq.pos)
+	op := NewZOp(zm)
+	fmt.Printf("instruction %2d class: %d PC: %X\n", op.opcode, op.class, zm.seq.pos)
 
 	switch op.class {
 	case ZEROOP:

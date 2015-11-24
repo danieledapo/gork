@@ -89,7 +89,7 @@ func ZCall(zm *ZMachine, operands []uint16) {
 	routine := NewZRoutine(zm.seq, zm.seq.pos)
 
 	zm.stack.Push(routine)
-	fmt.Println(routine)
+	// fmt.Println(routine)
 
 	if routineAddr == 0 {
 		ZReturnFalse(zm)
@@ -199,7 +199,7 @@ func ZNOOP(_ *ZMachine, _ uint16, _ uint16) {
 }
 
 func ZLoad(zm *ZMachine, varnum uint16) {
-	zm.StoreReturn(zm.GetVarAt(varnum))
+	zm.StoreReturn(zm.GetVarAt(byte(varnum)))
 }
 
 func ZLoadB(zm *ZMachine, array uint16, bidx uint16) {
@@ -214,7 +214,7 @@ func ZLoadW(zm *ZMachine, array uint16, widx uint16) {
 }
 
 func ZStore(zm *ZMachine, varnum uint16, value uint16) {
-	zm.StoreVarAt(varnum, value)
+	zm.StoreVarAt(byte(varnum), value)
 }
 
 func ZStoreB(zm *ZMachine, args []uint16) {
