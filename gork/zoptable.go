@@ -23,7 +23,7 @@ var zeroOpFuncs = []ZeroOpFunc{
 }
 
 var oneOpFuncs = []OneOpFunc{
-	nil,
+	ZJ0,
 	nil,
 	nil,
 	nil,
@@ -43,9 +43,9 @@ var oneOpFuncs = []OneOpFunc{
 
 var twoOpFuncs = []TwoOpFunc{
 	ZNOOP,
-	nil,
-	nil,
-	nil,
+	nil, // ZJe is a two op func but it accepts VAR count of args
+	ZJl,
+	ZJg,
 	nil,
 	nil,
 	nil,
@@ -85,8 +85,9 @@ var varOpFuncs = []VarOpFunc{
 func ZCall(zm *ZMachine, operands []uint16) {
 	routineAddr := PackedAddress(operands[0])
 
+	retAddr := zm.seq.pos
 	zm.seq.pos = routineAddr
-	routine := NewZRoutine(zm.seq, zm.seq.pos)
+	routine := NewZRoutine(zm.seq, retAddr)
 
 	zm.stack.Push(routine)
 	// fmt.Println(routine)
@@ -106,6 +107,7 @@ func ZCall(zm *ZMachine, operands []uint16) {
 
 func ZReturn(zm *ZMachine, retValue uint16) {
 	zm.seq.pos = zm.stack.Pop().retAddr
+	// fmt.Printf("Returning to 0x%X\n", zm.seq.pos)
 	zm.StoreReturn(retValue)
 }
 
@@ -115,6 +117,29 @@ func ZReturnFalse(zm *ZMachine) {
 
 func ZReturnTrue(zm *ZMachine) {
 	ZReturn(zm, uint16(1))
+}
+
+func ZJe(zm *ZMachine, args []uint16) {
+	conditionOk := false
+	for _, v := range args[1:] {
+		if v == args[0] {
+			conditionOk = true
+			break
+		}
+	}
+	zm.Branch(conditionOk)
+}
+
+func ZJl(zm *ZMachine, lhs uint16, rhs uint16) {
+	zm.Branch(lhs < rhs)
+}
+
+func ZJg(zm *ZMachine, lhs uint16, rhs uint16) {
+	zm.Branch(lhs > rhs)
+}
+
+func ZJ0(zm *ZMachine, op uint16) {
+	zm.Branch(op == 0)
 }
 
 func ZPrint(zm *ZMachine) {

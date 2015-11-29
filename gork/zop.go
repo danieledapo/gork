@@ -105,7 +105,7 @@ func (zop *ZOp) configureShort(op byte) {
 		zop.optypes = make([]byte, 1)
 
 		// optype is stored in bits #4 #5
-		zop.optypes[0] = op & 0x18
+		zop.optypes[0] = (op >> 4) & 0x03
 		zop.operands[0] = zop.readOpType(zop.optypes[0])
 	} // ignore ZEROOP
 }
