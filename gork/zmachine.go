@@ -126,13 +126,16 @@ func (zm *ZMachine) Branch(conditionOk bool) {
 			// offset of 1 means return false from current routine
 			ZReturnTrue(zm)
 		} else {
-			// otherwise we move to instruction at address:
-			//   Address after branch data + Offset - 2
-			jumpAddr := uint16(int32(zm.seq.pos) + int32(offset) - 2)
-			zm.seq.pos = jumpAddr
+			// otherwise we move to instruction to the given offset
+			zm.seq.pos = zm.CalcJumpAddress(int32(offset))
 			// fmt.Printf("Jumping to 0x%X offset %d\n", jumpAddr, offset)
 		}
 	}
+}
+
+func (zm *ZMachine) CalcJumpAddress(offset int32) uint16 {
+	// Address after branch data + Offset - 2
+	return uint16(int32(zm.seq.pos) + int32(offset) - 2)
 }
 
 func (zm *ZMachine) InterpretAll() {

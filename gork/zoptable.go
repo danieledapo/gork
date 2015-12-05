@@ -35,7 +35,7 @@ var oneOpFuncs = []OneOpFunc{
 	nil,
 	ZPrintObject,
 	ZReturn,
-	nil,
+	ZJump,
 	ZPrintAtPacked,
 	ZLoad,
 	ZNot,
@@ -140,6 +140,14 @@ func ZJg(zm *ZMachine, lhs uint16, rhs uint16) {
 
 func ZJ0(zm *ZMachine, op uint16) {
 	zm.Branch(op == 0)
+}
+
+func ZJump(zm *ZMachine, offset uint16) {
+	// uncoditional branch
+	// this is not a branch instruction
+	// jumping to an instruction in a different routine is permitted,
+	// but the standard consider it bad practice :)
+	zm.seq.pos = zm.CalcJumpAddress(int32(offset))
 }
 
 func ZPrint(zm *ZMachine) {
