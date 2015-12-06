@@ -1,6 +1,7 @@
 package gork
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 )
@@ -20,6 +21,7 @@ type ZObject struct {
 	name          string
 	propertiesPos uint16
 	properties    map[byte][]byte
+	mem           *ZMemory
 }
 
 func NewZObject(mem *ZMemory, number uint8, header *ZHeader) *ZObject {
@@ -30,6 +32,8 @@ func NewZObject(mem *ZMemory, number uint8, header *ZHeader) *ZObject {
 
 func (obj *ZObject) configure(mem *ZMemory, number uint8, header *ZHeader) {
 	obj.number = number
+
+	obj.mem = mem
 
 	seq := mem.GetSequential(ZObjectAddress(number, header))
 
@@ -44,9 +48,6 @@ func (obj *ZObject) configure(mem *ZMemory, number uint8, header *ZHeader) {
 		bits := uint8(attr >> (uint8(i) * 8))
 		for j := 7; j >= 0; j-- {
 			obj.attributes[byteno*8+7-uint8(j)] = (bits>>uint8(j))&0x01 == 0x01
-			// if (bits>>uint8(j))&0x01 == 0x01 {
-			// 	obj.attributes = append(obj.attributes, byteno*8+7-uint8(j))
-			// }
 		}
 	}
 
@@ -55,23 +56,21 @@ func (obj *ZObject) configure(mem *ZMemory, number uint8, header *ZHeader) {
 	obj.child = seq.ReadByte()
 	obj.propertiesPos = seq.ReadWord()
 
-	obj.readProperties(mem, header)
+	obj.readProperties(header)
 }
 
-func (obj *ZObject) readProperties(mem *ZMemory, header *ZHeader) {
+func (obj *ZObject) readProperties(header *ZHeader) {
 	// v3
 
 	obj.properties = make(map[byte][]byte)
 
-	seq := mem.GetSequential(obj.propertiesPos)
+	seq := obj.mem.GetSequential(obj.propertiesPos)
 
 	// number of words
 	textLength := uint16(seq.ReadByte())
 	if textLength != 0 {
-		obj.name = string(mem.DecodeZStringAt(obj.propertiesPos+1, header))
+		obj.name = string(seq.DecodeZString(header))
 	}
-
-	seq.pos = obj.propertiesPos + 1 + textLength*2
 
 	dataSize := seq.ReadByte()
 	for dataSize > 0 {
@@ -83,6 +82,100 @@ func (obj *ZObject) readProperties(mem *ZMemory, header *ZHeader) {
 				seq.ReadByte())
 		}
 		dataSize = seq.ReadByte()
+	}
+}
+
+func (obj *ZObject) SetProperty(propertyId byte, value uint16) {
+	if _, ok := obj.properties[propertyId]; !ok {
+		panic(fmt.Sprintf("Property %d not found\n", propertyId))
+	}
+
+	// TODO
+	// check if it is legal for a story to get/set property
+	// directly via store/load or it is forced to use putprop/getprop
+	// in case it's legal try to uncomment the commented lines and hope
+	// the best
+	// however if the story table address can be modified as well
+	// than ZMachine cannot cache objects, because otherwise it would
+	// be too complex to intercept writes to the address of the property
+	// table of an object
+
+	// addr := obj.GetPropertyAddr(propertyId)
+
+	// it seems we cannot take address of values of a map :'(
+	switch len(obj.properties[propertyId]) {
+	case 1:
+		// store only least significant byte
+		data := byte(value & 0x00FF)
+		obj.properties[propertyId][0] = data
+		// obj.mem.WriteByteAt(addr, data)
+	case 2:
+		// big endian
+		obj.properties[propertyId][0] = byte((value >> 8) & 0x00FF)
+		obj.properties[propertyId][1] = byte(value & 0x00FF)
+		// obj.mem.WriteWordAt(addr, value)
+	default:
+		panic("cannot set property, because its length is > 2 bytes")
+	}
+}
+
+func (obj *ZObject) GetProperty(propertyId byte) (uint16, error) {
+	if _, ok := obj.properties[propertyId]; !ok {
+		// don't panic, cause the property could be in the
+		// global default properties table
+		return 0, errors.New(fmt.Sprintf("property %d not found\n", propertyId))
+	}
+
+	res := uint16(0)
+
+	// it seems we cannot take address of values of a map :'(
+	switch len(obj.properties[propertyId]) {
+	case 1:
+		res = uint16(obj.properties[propertyId][0])
+	case 2:
+		// big endian
+		res |= uint16(obj.properties[propertyId][0]) << 8
+		res |= uint16(obj.properties[propertyId][1])
+	default:
+		panic("cannot get property, because its length is > 2 bytes")
+	}
+
+	return res, nil
+}
+
+func GetPropertyLen(mem *ZMemory, propertyPos uint16) uint16 {
+	// the property size byte is the byte before propertyPos
+	size := mem.ByteAt(propertyPos - 1)
+	nbytes := (size >> 5) + 1
+	return uint16(nbytes)
+}
+
+func (obj *ZObject) GetFirstPropertyAddr() uint16 {
+	// text length is in words
+	textLength := obj.mem.ByteAt(obj.propertiesPos)
+	return obj.propertiesPos + 1 + uint16(textLength)*2
+}
+
+func (obj *ZObject) GetPropertyAddr(propertyId byte) uint16 {
+	// v3
+	addr := obj.GetFirstPropertyAddr()
+
+	for {
+		size := obj.mem.ByteAt(addr)
+		addr++
+
+		propno := size & 0x1F
+
+		if size == 0 || propno < propertyId {
+			// must return 0 if property is not present
+			// properties are sorted in descending order
+			return 0
+		}
+
+		if propno == propertyId {
+			return addr
+		}
+		addr += uint16((size >> 5) + 1)
 	}
 }
 

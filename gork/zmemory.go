@@ -39,8 +39,8 @@ func (zmem *ZMemory) WriteByteAt(addr uint16, val byte) {
 }
 
 func (zmem *ZMemory) WriteWordAt(addr uint16, val uint16) {
-	(*zmem)[addr] = byte(val & 0xF0)
-	(*zmem)[addr+1] = byte(val & 0X0F)
+	(*zmem)[addr] = byte(val >> 8)
+	(*zmem)[addr+1] = byte(val & 0X00FF)
 }
 
 func (zmem *ZMemory) GetSequential(addr uint16) *ZMemorySequential {

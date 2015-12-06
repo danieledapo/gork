@@ -73,7 +73,7 @@ var varOpFuncs = []VarOpFunc{
 	ZCall,
 	ZStoreW,
 	ZStoreB,
-	nil,
+	ZPutProp,
 	nil,
 	ZPrintChar,
 	ZPrintNum,
@@ -277,4 +277,33 @@ func ZPull(zm *ZMachine, args []uint16) {
 func ZPop(zm *ZMachine) {
 	topLocals := &zm.stack.Top().locals
 	*topLocals = append((*topLocals)[:1], (*topLocals)[1:]...)
+}
+
+func ZPutProp(zm *ZMachine, args []uint16) {
+	zm.objects[args[0]-1].SetProperty(byte(args[1]), args[2])
+}
+
+func ZGetProp(zm *ZMachine, objectId uint16, propertyId uint16) {
+	res, err := zm.objects[objectId-1].GetProperty(byte(propertyId))
+
+	if err != nil {
+		// get default one
+		res = zm.GetDefaultProperty(byte(propertyId))
+	}
+
+	zm.StoreReturn(res)
+}
+
+func ZGetPropLen(zm *ZMachine, propertyAddr uint16) {
+	if propertyAddr == 0 {
+		zm.StoreReturn(0)
+	} else {
+		res := GetPropertyLen(zm.seq.mem, propertyAddr)
+		zm.StoreReturn(res)
+	}
+}
+
+func ZGetPropAddr(zm *ZMachine, objectId uint16, propertyId uint16) {
+	addr := zm.objects[objectId-1].GetPropertyAddr(byte(propertyId))
+	zm.StoreReturn(addr)
 }

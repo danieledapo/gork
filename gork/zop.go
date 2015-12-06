@@ -75,9 +75,10 @@ func (zop *ZOp) configureVar(op byte) {
 	// bits #1 #0 are last operand's type
 	types := zop.zm.seq.ReadByte()
 
-	mask := byte(0xC0)
-	for ; mask > 0; mask = mask >> 2 {
-		ty := types & mask
+	i := 6
+
+	for ; i > 0; i -= 2 {
+		ty := (types >> byte(i)) & 0x03
 		if ty == OMMITTED_CONSTANT {
 			break
 		}
@@ -85,8 +86,8 @@ func (zop *ZOp) configureVar(op byte) {
 		zop.operands = append(zop.operands, zop.readOpType(ty))
 	}
 
-	for ; mask > 0; mask = mask >> 2 {
-		if types&mask != OMMITTED_CONSTANT {
+	for ; i > 0; i -= 2 {
+		if (types>>byte(i))&0x03 != OMMITTED_CONSTANT {
 			panic("non omitted type after omitted one!")
 		}
 	}

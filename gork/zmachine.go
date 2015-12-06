@@ -138,6 +138,17 @@ func (zm *ZMachine) CalcJumpAddress(offset int32) uint16 {
 	return uint16(int32(zm.seq.pos) + int32(offset) - 2)
 }
 
+func (zm *ZMachine) GetDefaultProperty(propertyIdx byte) uint16 {
+	// v3
+	if propertyIdx < 1 || propertyIdx > 31 {
+		panic("Invalid propertyIndex, values range is [1,31]")
+	}
+
+	// property table is a sequence of words
+	addr := uint16(zm.header.objTblPos + uint16(propertyIdx-1)*2)
+	return zm.seq.mem.WordAt(addr)
+}
+
 func (zm *ZMachine) InterpretAll() {
 	for !zm.quitted {
 		zm.Interpret()
