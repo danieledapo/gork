@@ -20,6 +20,8 @@ var zeroOpFuncs = []ZeroOpFunc{
 	nil,
 	nil,
 	ZPop,
+	nil,
+	ZNl,
 }
 
 var oneOpFuncs = []OneOpFunc{
@@ -52,7 +54,7 @@ var twoOpFuncs = []TwoOpFunc{
 	nil,
 	ZOr,
 	ZAnd,
-	nil,
+	ZTestAttr,
 	nil,
 	nil,
 	ZStore,
@@ -306,4 +308,21 @@ func ZGetPropLen(zm *ZMachine, propertyAddr uint16) {
 func ZGetPropAddr(zm *ZMachine, objectId uint16, propertyId uint16) {
 	addr := zm.objects[objectId-1].GetPropertyAddr(byte(propertyId))
 	zm.StoreReturn(addr)
+}
+
+func ZTestAttr(zm *ZMachine, objectId uint16, attrId uint16) {
+	cond := zm.objects[objectId-1].attributes[attrId]
+	zm.Branch(cond)
+}
+
+func ZSetAttr(zm *ZMachine, objectId uint16, attrId uint16) {
+	zm.objects[objectId-1].attributes[attrId] = true
+}
+
+func ZClearAttr(zm *ZMachine, objectId uint16, attrId uint16) {
+	zm.objects[objectId-1].attributes[attrId] = false
+}
+
+func ZNl(_ *ZMachine) {
+	fmt.Println("")
 }
