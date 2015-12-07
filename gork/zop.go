@@ -69,6 +69,13 @@ func (zop *ZOp) configureVar(op byte) {
 	// opcode is stored in the bottom 5 bits
 	zop.opcode = op & 0x1F
 
+	// if bit #5 is 0 then it's TWOOP
+	if ((op >> 5) & 0x01) == 0 {
+		zop.class = TWOOP
+	} else {
+		zop.class = VAROP
+	}
+
 	// types are stored in an additional byte
 	// 2 bits per type
 	// bits #7 #6 are first operand's type

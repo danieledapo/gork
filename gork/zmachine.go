@@ -156,8 +156,9 @@ func (zm *ZMachine) InterpretAll() {
 }
 
 func (zm *ZMachine) Interpret() {
+	tmpPc := zm.seq.pos
 	op := NewZOp(zm)
-	// fmt.Printf("instruction %2d class: %d PC: %X\n", op.opcode, op.class, zm.seq.pos)
+	fmt.Printf("instruction %2d class: %d PC: %X\n", op.opcode, op.class, tmpPc)
 
 	switch op.class {
 	case ZEROOP:

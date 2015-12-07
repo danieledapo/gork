@@ -270,10 +270,18 @@ func ZPush(zm *ZMachine, args []uint16) {
 }
 
 func ZPull(zm *ZMachine, args []uint16) {
-	varnum := byte(args[0]) - 1
-	topLocals := &zm.stack.Top().locals
-	*topLocals = append((*topLocals)[:varnum], (*topLocals)[varnum:]...)
+	fmt.Println("Args >>>", args, "IP:", zm.seq.pos)
+
+	popped := zm.stack.Top().locals[len(zm.stack.Top().locals)-1]
+
+	fmt.Printf("Popped %d 0x%X %d\n", popped, zm.seq.pos, args[0])
+
+	zm.stack.Top().locals = zm.stack.Top().locals[:len(zm.stack.Top().locals)-1]
+	// varnum := byte(args[0]) - 1
+	// topLocals := &zm.stack.Top().locals
+	// *topLocals = append((*topLocals)[:varnum], (*topLocals)[varnum:]...)
 	// should not zm.StoreReturn popped value
+	zm.StoreVarAt(byte(args[0]), popped)
 }
 
 func ZPop(zm *ZMachine) {
