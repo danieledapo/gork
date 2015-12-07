@@ -49,7 +49,7 @@ var twoOpFuncs = []TwoOpFunc{
 	ZJl,
 	ZJg,
 	nil,
-	nil,
+	ZIncChk,
 	nil,
 	nil,
 	ZOr,
@@ -333,4 +333,16 @@ func ZClearAttr(zm *ZMachine, objectId uint16, attrId uint16) {
 
 func ZNl(_ *ZMachine) {
 	fmt.Println("")
+}
+
+func ZIncChk(zm *ZMachine, varnum uint16, value uint16) {
+	newValue := int16(zm.GetVarAt(byte(varnum)) + 1)
+	zm.StoreVarAt(byte(varnum), uint16(newValue))
+	zm.Branch(newValue > int16(value))
+}
+
+func ZDecChk(zm *ZMachine, varnum uint16, value uint16) {
+	newValue := int16(zm.GetVarAt(byte(varnum)) - 1)
+	zm.StoreVarAt(byte(varnum), uint16(newValue))
+	zm.Branch(newValue < int16(value))
 }
