@@ -2,6 +2,7 @@ package gork
 
 import (
 	"fmt"
+	"log"
 )
 
 // bottom is in #0
@@ -84,6 +85,27 @@ func (zm *ZMachine) StoreVarAt(varnum byte, val uint16) {
 	}
 }
 
+func (zm *ZMachine) UpdateVarAt(varnum byte, val int16) uint16 {
+	newValue := uint16(0)
+	if varnum == 0 {
+		// top of the stack
+		newValue = uint16(int16(zm.stack.Top().locals[len(zm.stack.Top().locals)-1]) + val)
+		zm.stack.Top().locals[len(zm.stack.Top().locals)-1] = newValue
+	} else if varnum < 0x10 {
+		// local variable
+		// starting from 0
+		zm.stack.Top().locals[varnum-1] += uint16(val)
+		newValue = zm.stack.Top().locals[varnum-1]
+	} else {
+		// global variable
+		// globals table is a table of 240 words
+		globalAddr := zm.header.globalsPos + uint16(varnum-0x10)*2
+		newValue = zm.seq.mem.WordAt(globalAddr) + uint16(val)
+		zm.seq.mem.WriteWordAt(globalAddr, newValue)
+	}
+	return newValue
+}
+
 func (zm *ZMachine) StoreReturn(val uint16) {
 	varnum := zm.seq.ReadByte()
 	zm.StoreVarAt(varnum, val)
@@ -128,7 +150,7 @@ func (zm *ZMachine) Branch(conditionOk bool) {
 		} else {
 			// otherwise we move to instruction to the given offset
 			zm.seq.pos = zm.CalcJumpAddress(int32(offset))
-			// fmt.Printf("Jumping to 0x%X offset %d\n", jumpAddr, offset)
+			log.Printf("Jumping to address: %X offset: %X\n", zm.seq.pos, offset)
 		}
 	}
 }
@@ -141,7 +163,7 @@ func (zm *ZMachine) CalcJumpAddress(offset int32) uint16 {
 func (zm *ZMachine) GetDefaultProperty(propertyIdx byte) uint16 {
 	// v3
 	if propertyIdx < 1 || propertyIdx > 31 {
-		panic("Invalid propertyIndex, values range is [1,31]")
+		log.Panicf("Invalid propertyIndex %d, values range in v3 is [1,31]\n", propertyIdx)
 	}
 
 	// property table is a sequence of words
@@ -158,7 +180,7 @@ func (zm *ZMachine) InterpretAll() {
 func (zm *ZMachine) Interpret() {
 	tmpPc := zm.seq.pos
 	op := NewZOp(zm)
-	fmt.Printf("instruction %2d class: %d PC: %X\n", op.opcode, op.class, tmpPc)
+	log.Printf("Interpreting instruction at PC %X\n%s", tmpPc, op)
 
 	switch op.class {
 	case ZEROOP:

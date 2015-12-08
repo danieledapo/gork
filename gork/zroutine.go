@@ -38,7 +38,7 @@ func MainRoutine(mem *ZMemory, header *ZHeader) *ZRoutine {
 }
 
 func (routine *ZRoutine) String() string {
-	ret := fmt.Sprintf("Routine at %X\nLocals: [", routine.addr)
+	ret := fmt.Sprintf("Routine at %X Locals: [", routine.addr)
 
 	tmp := ""
 	if len(routine.locals) > 0 {

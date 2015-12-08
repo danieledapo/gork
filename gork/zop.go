@@ -158,7 +158,7 @@ func (zop *ZOp) String() string {
 
 	ret := ""
 
-	ret += fmt.Sprintf("Opcode: %d ", zop.opcode)
+	ret += fmt.Sprintf("  Opcode: %d ", zop.opcode)
 
 	switch zop.class {
 	case ZEROOP:
@@ -172,13 +172,13 @@ func (zop *ZOp) String() string {
 	}
 	ret += "\n"
 
-	ret += fmt.Sprintln("Operands:\n")
+	ret += fmt.Sprintln("  Operands:")
 
 	for i := range zop.operands {
 		ty := zop.optypes[i]
 		operand := zop.operands[i]
 
-		ret += fmt.Sprintf("  %X ", operand)
+		ret += fmt.Sprintf("    %2X ", operand)
 
 		switch ty {
 		case LARGE_CONSTANT:

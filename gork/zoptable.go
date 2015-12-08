@@ -2,6 +2,7 @@ package gork
 
 import (
 	"fmt"
+	"log"
 )
 
 type ZeroOpFunc func(*ZMachine)
@@ -19,7 +20,7 @@ var zeroOpFuncs = []ZeroOpFunc{
 	nil,
 	nil,
 	nil,
-	ZPop,
+	nil,
 	nil,
 	ZNl,
 }
@@ -81,7 +82,7 @@ var varOpFuncs = []VarOpFunc{
 	ZPrintNum,
 	nil,
 	ZPush,
-	ZPull,
+	nil,
 }
 
 func ZCall(zm *ZMachine, operands []uint16) {
@@ -92,7 +93,6 @@ func ZCall(zm *ZMachine, operands []uint16) {
 	routine := NewZRoutine(zm.seq, retAddr)
 
 	zm.stack.Push(routine)
-	// fmt.Println(routine)
 
 	if routineAddr == 0 {
 		ZReturnFalse(zm)
@@ -105,11 +105,12 @@ func ZCall(zm *ZMachine, operands []uint16) {
 			routine.locals[i] = v
 		}
 	}
+	log.Print("Call ", routine)
 }
 
 func ZReturn(zm *ZMachine, retValue uint16) {
 	zm.seq.pos = zm.stack.Pop().retAddr
-	// fmt.Printf("Returning to 0x%X\n", zm.seq.pos)
+	log.Printf("Returning to 0x%X\n", zm.seq.pos)
 	zm.StoreReturn(retValue)
 }
 
@@ -270,23 +271,14 @@ func ZPush(zm *ZMachine, args []uint16) {
 }
 
 func ZPull(zm *ZMachine, args []uint16) {
-	fmt.Println("Args >>>", args, "IP:", zm.seq.pos)
-
-	popped := zm.stack.Top().locals[len(zm.stack.Top().locals)-1]
-
-	fmt.Printf("Popped %d 0x%X %d\n", popped, zm.seq.pos, args[0])
-
+	// popped := zm.stack.Top().locals[len(zm.stack.Top().locals)-1]
 	zm.stack.Top().locals = zm.stack.Top().locals[:len(zm.stack.Top().locals)-1]
-	// varnum := byte(args[0]) - 1
-	// topLocals := &zm.stack.Top().locals
-	// *topLocals = append((*topLocals)[:varnum], (*topLocals)[varnum:]...)
 	// should not zm.StoreReturn popped value
-	zm.StoreVarAt(byte(args[0]), popped)
 }
 
 func ZPop(zm *ZMachine) {
-	topLocals := &zm.stack.Top().locals
-	*topLocals = append((*topLocals)[:1], (*topLocals)[1:]...)
+	// the same as ZPull?
+	zm.stack.Top().locals = zm.stack.Top().locals[:len(zm.stack.Top().locals)-1]
 }
 
 func ZPutProp(zm *ZMachine, args []uint16) {
@@ -336,13 +328,11 @@ func ZNl(_ *ZMachine) {
 }
 
 func ZIncChk(zm *ZMachine, varnum uint16, value uint16) {
-	newValue := int16(zm.GetVarAt(byte(varnum)) + 1)
-	zm.StoreVarAt(byte(varnum), uint16(newValue))
-	zm.Branch(newValue > int16(value))
+	newValue := zm.UpdateVarAt(byte(varnum), +1)
+	zm.Branch(int16(newValue) > int16(value))
 }
 
 func ZDecChk(zm *ZMachine, varnum uint16, value uint16) {
-	newValue := int16(zm.GetVarAt(byte(varnum)) - 1)
-	zm.StoreVarAt(byte(varnum), uint16(newValue))
-	zm.Branch(newValue < int16(value))
+	newValue := zm.UpdateVarAt(byte(varnum), -1)
+	zm.Branch(int16(newValue) < int16(value))
 }
