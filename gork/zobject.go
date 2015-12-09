@@ -9,8 +9,8 @@ import (
 
 const (
 	MaxZObjects       = 255       // v3
-	zobjectSize       = uint16(9) // v3
-	propertyOffset    = uint16(7) //v3
+	zobjectSize       = uint32(9) // v3
+	propertyOffset    = uint32(7) //v3
 	NULL_OBJECT_INDEX = uint8(0)
 )
 
@@ -66,7 +66,7 @@ func (obj *ZObject) readProperties(header *ZHeader) {
 
 	obj.properties = make(map[byte][]byte)
 
-	seq := obj.mem.GetSequential(obj.propertiesPos)
+	seq := obj.mem.GetSequential(uint32(obj.propertiesPos))
 
 	// number of words
 	textLength := uint16(seq.ReadByte())
@@ -145,20 +145,20 @@ func (obj *ZObject) GetProperty(propertyId byte) (uint16, error) {
 	return res, nil
 }
 
-func GetPropertyLen(mem *ZMemory, propertyPos uint16) uint16 {
+func GetPropertyLen(mem *ZMemory, propertyPos uint32) uint16 {
 	// the property size byte is the byte before propertyPos
-	size := mem.ByteAt(propertyPos - 1)
+	size := mem.ByteAt(uint32(propertyPos - 1))
 	nbytes := (size >> 5) + 1
 	return uint16(nbytes)
 }
 
-func (obj *ZObject) GetFirstPropertyAddr() uint16 {
+func (obj *ZObject) GetFirstPropertyAddr() uint32 {
 	// text length is in words
-	textLength := obj.mem.ByteAt(obj.propertiesPos)
-	return obj.propertiesPos + 1 + uint16(textLength)*2
+	textLength := obj.mem.ByteAt(uint32(obj.propertiesPos))
+	return uint32(obj.propertiesPos) + 1 + uint32(textLength)*2
 }
 
-func (obj *ZObject) GetPropertyAddr(propertyId byte) uint16 {
+func (obj *ZObject) GetPropertyAddr(propertyId byte) uint32 {
 	// v3
 	addr := obj.GetFirstPropertyAddr()
 
@@ -177,26 +177,26 @@ func (obj *ZObject) GetPropertyAddr(propertyId byte) uint16 {
 		if propno == propertyId {
 			return addr
 		}
-		addr += uint16((size >> 5) + 1)
+		addr += uint32((size >> 5) + 1)
 	}
 }
 
-func ZObjectAddress(idx uint8, header *ZHeader) uint16 {
+func ZObjectAddress(idx uint8, header *ZHeader) uint32 {
 	if idx < 1 {
 		log.Fatal("objects are numbered from 1 to 255")
 	}
 	// v3 skip 31 words containing property default table
-	return uint16(header.objTblPos) + 31*2 + uint16(idx-1)*uint16(zobjectSize)
+	return uint32(header.objTblPos) + 31*2 + uint32(idx-1)*zobjectSize
 }
 
-func ZObjectId(address uint16, header *ZHeader) uint8 {
-	res := (address - header.objTblPos - 31*2) / zobjectSize
+func ZObjectId(address uint32, header *ZHeader) uint8 {
+	res := (address - uint32(header.objTblPos) - 31*2) / zobjectSize
 	return uint8(res) + 1
 }
 
 func ZObjectsCount(mem *ZMemory, header *ZHeader) uint8 {
 	count := uint8(0)
-	firstPropertyPos := uint16(0)
+	firstPropertyPos := uint32(0)
 
 	seq := mem.GetSequential(ZObjectAddress(1, header))
 
@@ -207,7 +207,7 @@ func ZObjectsCount(mem *ZMemory, header *ZHeader) uint8 {
 		if firstPropertyPos == 0 || seq.pos < firstPropertyPos {
 			seq.pos += propertyOffset
 
-			propertyPos := seq.PeekWord()
+			propertyPos := uint32(seq.PeekWord())
 			if firstPropertyPos == 0 || propertyPos < firstPropertyPos {
 				firstPropertyPos = propertyPos
 			}

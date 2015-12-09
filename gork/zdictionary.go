@@ -14,7 +14,7 @@ type ZDictionary struct {
 func NewZDictionary(mem *ZMemory, header *ZHeader) *ZDictionary {
 	zdict := new(ZDictionary)
 
-	seq := mem.GetSequential(header.dictPos)
+	seq := mem.GetSequential(uint32(header.dictPos))
 
 	n := seq.ReadByte()
 
@@ -30,7 +30,7 @@ func NewZDictionary(mem *ZMemory, header *ZHeader) *ZDictionary {
 	for i := uint16(0); i < entryCount; i++ {
 		word := mem.DecodeZStringAt(seq.pos, header)
 		zdict.words = append(zdict.words, word)
-		seq.pos += uint16(zdict.entrySize)
+		seq.pos += uint32(zdict.entrySize)
 	}
 
 	return zdict

@@ -86,7 +86,7 @@ var varOpFuncs = []VarOpFunc{
 }
 
 func ZCall(zm *ZMachine, operands []uint16) {
-	routineAddr := PackedAddress(operands[0])
+	routineAddr := PackedAddress(uint32(operands[0]))
 
 	retAddr := zm.seq.pos
 	zm.seq.pos = routineAddr
@@ -150,7 +150,7 @@ func ZJump(zm *ZMachine, offset uint16) {
 	// this is not a branch instruction
 	// jumping to an instruction in a different routine is permitted,
 	// but the standard consider it bad practice :)
-	zm.seq.pos = zm.CalcJumpAddress(int32(offset))
+	zm.seq.pos = zm.CalcJumpAddress(int16(offset))
 }
 
 func ZPrint(zm *ZMachine) {
@@ -170,12 +170,13 @@ func ZPrintObject(zm *ZMachine, obj uint16) {
 }
 
 func ZPrintAt(zm *ZMachine, addr uint16) {
-	str := zm.seq.mem.DecodeZStringAt(addr, zm.header)
+	str := zm.seq.mem.DecodeZStringAt(uint32(addr), zm.header)
 	fmt.Print(str)
 }
 
 func ZPrintAtPacked(zm *ZMachine, paddr uint16) {
-	ZPrintAt(zm, PackedAddress(paddr))
+	str := zm.seq.mem.DecodeZStringAt(PackedAddress(uint32(paddr)), zm.header)
+	fmt.Print(str)
 }
 
 func ZPrintNum(zm *ZMachine, args []uint16) {
@@ -240,13 +241,13 @@ func ZLoad(zm *ZMachine, varnum uint16) {
 
 func ZLoadB(zm *ZMachine, array uint16, bidx uint16) {
 	// TODO access violation
-	zm.StoreReturn(uint16(zm.seq.mem.ByteAt(array + bidx)))
+	zm.StoreReturn(uint16(zm.seq.mem.ByteAt(uint32(array + bidx))))
 }
 
 func ZLoadW(zm *ZMachine, array uint16, widx uint16) {
 	// TODO access violation
 	// index is the index of the nth word
-	zm.StoreReturn(zm.seq.mem.WordAt(array + widx*2))
+	zm.StoreReturn(zm.seq.mem.WordAt(uint32(array + widx*2)))
 }
 
 func ZStore(zm *ZMachine, varnum uint16, value uint16) {
@@ -256,13 +257,13 @@ func ZStore(zm *ZMachine, varnum uint16, value uint16) {
 func ZStoreB(zm *ZMachine, args []uint16) {
 	// TODO access violation
 	addr := args[0] + args[1]
-	zm.seq.mem.WriteByteAt(addr, byte(args[2]))
+	zm.seq.mem.WriteByteAt(uint32(addr), byte(args[2]))
 }
 
 func ZStoreW(zm *ZMachine, args []uint16) {
 	// TODO access violation
 	// index is the index of the nth word
-	addr := args[0] + args[1]*2
+	addr := uint32(args[0]) + uint32(args[1])*2
 	zm.seq.mem.WriteWordAt(addr, args[2])
 }
 
@@ -331,14 +332,14 @@ func ZGetPropLen(zm *ZMachine, propertyAddr uint16) {
 	if propertyAddr == 0 {
 		zm.StoreReturn(0)
 	} else {
-		res := GetPropertyLen(zm.seq.mem, propertyAddr)
+		res := GetPropertyLen(zm.seq.mem, uint32(propertyAddr))
 		zm.StoreReturn(res)
 	}
 }
 
 func ZGetPropAddr(zm *ZMachine, objectId uint16, propertyId uint16) {
 	addr := zm.objects[objectId-1].GetPropertyAddr(byte(propertyId))
-	zm.StoreReturn(addr)
+	zm.StoreReturn(uint16(addr))
 }
 
 func ZTestAttr(zm *ZMachine, objectId uint16, attrId uint16) {

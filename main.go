@@ -19,6 +19,9 @@ func main() {
 
 	// test only Zork :)
 	buf, err := ioutil.ReadFile("zork1.z5")
+	// buf, err := ioutil.ReadFile("zork2.z5")
+	// buf, err := ioutil.ReadFile("zork3.z5")
+	// buf, err := ioutil.ReadFile("hhgg.z3")
 	if err != nil {
 		panic(err)
 	}

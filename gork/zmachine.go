@@ -48,7 +48,7 @@ func NewZMachine(mem *ZMemory, header *ZHeader) *ZMachine {
 
 	return &ZMachine{
 		header:  header,
-		seq:     mem.GetSequential(header.pc),
+		seq:     mem.GetSequential(uint32(header.pc)),
 		objects: objects,
 		quitted: false,
 		stack:   stack,
@@ -64,7 +64,8 @@ func (zm *ZMachine) GetVarAt(varnum byte) uint16 {
 		return zm.stack.Top().locals[varnum-1]
 	} else {
 		// global variable
-		return zm.seq.mem.WordAt(zm.header.globalsPos + (uint16(varnum)-0x10)*2)
+		globalAddr := uint32(zm.header.globalsPos) + uint32(varnum-0x10)*2
+		return zm.seq.mem.WordAt(globalAddr)
 	}
 }
 
@@ -80,7 +81,7 @@ func (zm *ZMachine) StoreVarAt(varnum byte, val uint16) {
 	} else {
 		// global variable
 		// globals table is a table of 240 words
-		globalAddr := zm.header.globalsPos + uint16(varnum-0x10)*2
+		globalAddr := uint32(zm.header.globalsPos) + uint32(varnum-0x10)*2
 		zm.seq.mem.WriteWordAt(globalAddr, val)
 	}
 }
@@ -99,7 +100,7 @@ func (zm *ZMachine) UpdateVarAt(varnum byte, val int16) uint16 {
 	} else {
 		// global variable
 		// globals table is a table of 240 words
-		globalAddr := zm.header.globalsPos + uint16(varnum-0x10)*2
+		globalAddr := uint32(zm.header.globalsPos) + uint32(varnum-0x10)*2
 		newValue = zm.seq.mem.WordAt(globalAddr) + uint16(val)
 		zm.seq.mem.WriteWordAt(globalAddr, newValue)
 	}
@@ -136,7 +137,7 @@ func (zm *ZMachine) Branch(conditionOk bool) {
 			firstPart |= 0x3 << 6
 		}
 
-		offset = int16(int16(firstPart<<8) | int16(zm.seq.ReadByte()))
+		offset = int16(firstPart<<8) | int16(zm.seq.ReadByte())
 	}
 
 	// jump if conditionOk and branchOnTrue are both true or false
@@ -149,10 +150,15 @@ func (zm *ZMachine) Branch(conditionOk bool) {
 			ZReturnTrue(zm)
 		} else {
 			// otherwise we move to instruction to the given offset
-			zm.seq.pos = zm.CalcJumpAddress(int32(offset))
+			zm.seq.pos = zm.CalcJumpAddress(offset)
 			log.Printf("Jumping to address: %X offset: %X\n", zm.seq.pos, offset)
 		}
 	}
+}
+
+func (zm *ZMachine) CalcJumpAddress(offset int16) uint32 {
+	// Address after branch data + Offset - 2
+	return uint32(int32(zm.seq.pos) + int32(offset) - 2)
 }
 
 func (zm *ZMachine) ClearObjectParent(objectId uint8) {
@@ -203,11 +209,6 @@ func (zm *ZMachine) ResetObjectParent(objectId uint8, newParentId uint8) {
 	zm.objects[objectId-1].parent = newParentId
 }
 
-func (zm *ZMachine) CalcJumpAddress(offset int32) uint16 {
-	// Address after branch data + Offset - 2
-	return uint16(int32(zm.seq.pos) + int32(offset) - 2)
-}
-
 func (zm *ZMachine) GetDefaultProperty(propertyIdx byte) uint16 {
 	// v3
 	if propertyIdx < 1 || propertyIdx > 31 {
@@ -215,7 +216,7 @@ func (zm *ZMachine) GetDefaultProperty(propertyIdx byte) uint16 {
 	}
 
 	// property table is a sequence of words
-	addr := uint16(zm.header.objTblPos + uint16(propertyIdx-1)*2)
+	addr := uint32(zm.header.objTblPos) + uint32((propertyIdx-1)*2)
 	return zm.seq.mem.WordAt(addr)
 }
 

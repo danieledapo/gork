@@ -15,12 +15,12 @@ func GetAbbreviations(mem *ZMemory, header *ZHeader) []string {
 	// v3 3 tables * 32 entries each
 	const abbrCount = 32 * 3
 
-	seq := mem.GetSequential(header.abbrTblPos)
+	seq := mem.GetSequential(uint32(header.abbrTblPos))
 
 	ret := []string{}
 
 	for i := uint16(0); i < abbrCount; i++ {
-		addr := seq.ReadWord() * 2
+		addr := uint32(seq.ReadWord()) * 2
 		ret = append(ret, mem.DecodeZStringAt(addr, header))
 	}
 

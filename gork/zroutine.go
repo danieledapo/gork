@@ -7,12 +7,12 @@ import (
 
 // aka StackFrame
 type ZRoutine struct {
-	addr    uint16
-	retAddr uint16
+	addr    uint32
+	retAddr uint32
 	locals  []uint16
 }
 
-func NewZRoutine(seq *ZMemorySequential, retAddr uint16) *ZRoutine {
+func NewZRoutine(seq *ZMemorySequential, retAddr uint32) *ZRoutine {
 	if !IsPackedAddress(seq.pos) {
 		log.Fatal("attempt to read routine at non packed address")
 	}
@@ -35,7 +35,7 @@ func NewZRoutine(seq *ZMemorySequential, retAddr uint16) *ZRoutine {
 }
 
 func MainRoutine(mem *ZMemory, header *ZHeader) *ZRoutine {
-	return NewZRoutine(mem.GetSequential(PackedAddress(header.pc)), 0)
+	return NewZRoutine(mem.GetSequential(PackedAddress(uint32(header.pc))), 0)
 }
 
 func (routine *ZRoutine) String() string {
