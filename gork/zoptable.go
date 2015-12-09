@@ -27,11 +27,11 @@ var zeroOpFuncs = []ZeroOpFunc{
 
 var oneOpFuncs = []OneOpFunc{
 	ZJ0,
+	ZGetSibling,
+	ZGetChild,
+	ZGetParent,
 	nil,
-	nil,
-	nil,
-	nil,
-	nil,
+	ZInc,
 	nil,
 	ZPrintAt,
 	nil,
@@ -51,18 +51,18 @@ var twoOpFuncs = []TwoOpFunc{
 	ZJg,
 	nil,
 	ZIncChk,
-	nil,
+	ZJin,
 	nil,
 	ZOr,
 	ZAnd,
 	ZTestAttr,
-	nil,
+	ZSetAttr,
 	nil,
 	ZStore,
-	nil,
+	ZInsertObj,
 	ZLoadW,
 	ZLoadB,
-	nil,
+	ZGetProp,
 	nil,
 	nil,
 	ZAdd,
@@ -82,7 +82,7 @@ var varOpFuncs = []VarOpFunc{
 	ZPrintNum,
 	nil,
 	ZPush,
-	nil,
+	ZPull,
 }
 
 func ZCall(zm *ZMachine, operands []uint16) {
@@ -271,14 +271,40 @@ func ZPush(zm *ZMachine, args []uint16) {
 }
 
 func ZPull(zm *ZMachine, args []uint16) {
-	// popped := zm.stack.Top().locals[len(zm.stack.Top().locals)-1]
-	zm.stack.Top().locals = zm.stack.Top().locals[:len(zm.stack.Top().locals)-1]
+	varnum := args[0]
+	zm.stack.Top().locals = append(zm.stack.Top().locals[:varnum],
+		zm.stack.Top().locals[varnum+1:]...)
 	// should not zm.StoreReturn popped value
 }
 
 func ZPop(zm *ZMachine) {
 	// the same as ZPull?
 	zm.stack.Top().locals = zm.stack.Top().locals[:len(zm.stack.Top().locals)-1]
+}
+
+func ZInsertObj(zm *ZMachine, objectId uint16, newParentId uint16) {
+	zm.ResetObjectParent(uint8(objectId), uint8(newParentId))
+}
+
+func ZJin(zm *ZMachine, childId uint16, parentId uint16) {
+	condition := zm.objects[childId-1].parent == uint8(parentId)
+	zm.Branch(condition)
+}
+
+func ZGetSibling(zm *ZMachine, objectId uint16) {
+	sibling := zm.objects[objectId-1].sibling
+	zm.StoreReturn(uint16(sibling))
+	zm.Branch(sibling != NULL_OBJECT_INDEX)
+}
+
+func ZGetChild(zm *ZMachine, objectId uint16) {
+	child := zm.objects[objectId-1].child
+	zm.StoreReturn(uint16(child))
+	zm.Branch(child != NULL_OBJECT_INDEX)
+}
+
+func ZGetParent(zm *ZMachine, objectId uint16) {
+	zm.StoreReturn(uint16(zm.objects[objectId-1].parent))
 }
 
 func ZPutProp(zm *ZMachine, args []uint16) {
@@ -325,6 +351,14 @@ func ZClearAttr(zm *ZMachine, objectId uint16, attrId uint16) {
 
 func ZNl(_ *ZMachine) {
 	fmt.Println("")
+}
+
+func ZInc(zm *ZMachine, varnum uint16) {
+	zm.UpdateVarAt(byte(varnum), +1)
+}
+
+func ZDec(zm *ZMachine, varnum uint16) {
+	zm.UpdateVarAt(byte(varnum), -1)
 }
 
 func ZIncChk(zm *ZMachine, varnum uint16, value uint16) {

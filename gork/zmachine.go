@@ -155,6 +155,54 @@ func (zm *ZMachine) Branch(conditionOk bool) {
 	}
 }
 
+func (zm *ZMachine) ClearObjectParent(objectId uint8) {
+	// TODO
+	// the same doubts of ZObject get/set properties apply here
+	// refer to the comment in zobject.go:SetProperty for
+	// better understanding
+
+	obj := zm.objects[objectId-1]
+
+	if obj.parent != NULL_OBJECT_INDEX {
+		parent := zm.objects[obj.parent-1]
+		if parent.child == objectId {
+			// obj is the first child so move to sibling
+			parent.child = obj.sibling
+		} else {
+			// we are among the siblings so update previous one
+			curChildId := obj.parent
+			prevChildId := NULL_OBJECT_INDEX
+
+			for curChildId != objectId && curChildId != NULL_OBJECT_INDEX {
+				prevChildId = curChildId
+				curChildId = zm.objects[curChildId-1].sibling
+			}
+			// TODO
+			// sanity checks
+
+			// update sibling to next one
+			zm.objects[prevChildId-1].sibling = obj.sibling
+		}
+	}
+	obj.parent = NULL_OBJECT_INDEX
+}
+
+func (zm *ZMachine) ResetObjectParent(objectId uint8, newParentId uint8) {
+	if objectId == newParentId {
+		log.Panic("trying to set object's parent to the object itself,",
+			"not sure is allowed")
+	}
+
+	zm.ClearObjectParent(objectId)
+
+	// change object so that its sibling is the first child of parent
+	// set parent's child to objectId
+	// set child's parent to the newParent
+	zm.objects[objectId-1].sibling = zm.objects[newParentId-1].child
+	zm.objects[newParentId-1].child = objectId
+	zm.objects[objectId-1].parent = newParentId
+}
+
 func (zm *ZMachine) CalcJumpAddress(offset int32) uint16 {
 	// Address after branch data + Offset - 2
 	return uint16(int32(zm.seq.pos) + int32(offset) - 2)

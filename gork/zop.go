@@ -2,6 +2,7 @@ package gork
 
 import (
 	"fmt"
+	"log"
 )
 
 const (
@@ -84,7 +85,7 @@ func (zop *ZOp) configureVar(op byte) {
 
 	i := 6
 
-	for ; i > 0; i -= 2 {
+	for ; i >= 0; i -= 2 {
 		ty := (types >> byte(i)) & 0x03
 		if ty == OMMITTED_CONSTANT {
 			break
@@ -93,15 +94,19 @@ func (zop *ZOp) configureVar(op byte) {
 		zop.operands = append(zop.operands, zop.readOpType(ty))
 	}
 
-	for ; i > 0; i -= 2 {
+	for ; i >= 0; i -= 2 {
 		if (types>>byte(i))&0x03 != OMMITTED_CONSTANT {
-			panic("non omitted type after omitted one!")
+			log.Panic("non omitted type after omitted one!")
 		}
 	}
 
-	if zop.class == TWOOP && len(zop.optypes) != 2 {
-		panic("2op in var form does not have 2 ops")
-	}
+	// following seems reasonable, but in practice it's useless
+	// because for instance ZJe is TWOOP but it actually accepts
+	// 3 args
+	// if zop.class == TWOOP && len(zop.optypes) != 2 {
+	// 	log.Fatalf("PC: %d 2op %d in var form does not have 2 ops %v\n",
+	// 		zop.zm.seq.pos, zop.opcode, zop.operands)
+	// }
 }
 
 func (zop *ZOp) configureShort(op byte) {

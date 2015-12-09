@@ -3,13 +3,15 @@ package gork
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 )
 
 const (
-	MaxZObjects    = 255       // v3
-	zobjectSize    = uint16(9) // v3
-	propertyOffset = uint16(7) //v3
+	MaxZObjects       = 255       // v3
+	zobjectSize       = uint16(9) // v3
+	propertyOffset    = uint16(7) //v3
+	NULL_OBJECT_INDEX = uint8(0)
 )
 
 type ZObject struct {
@@ -87,7 +89,7 @@ func (obj *ZObject) readProperties(header *ZHeader) {
 
 func (obj *ZObject) SetProperty(propertyId byte, value uint16) {
 	if _, ok := obj.properties[propertyId]; !ok {
-		panic(fmt.Sprintf("Property %d not found\n", propertyId))
+		log.Panic(fmt.Sprintf("Property %d not found\n", propertyId))
 	}
 
 	// TODO
@@ -115,7 +117,7 @@ func (obj *ZObject) SetProperty(propertyId byte, value uint16) {
 		obj.properties[propertyId][1] = byte(value & 0x00FF)
 		// obj.mem.WriteWordAt(addr, value)
 	default:
-		panic("cannot set property, because its length is > 2 bytes")
+		log.Panic("cannot set property, because its length is > 2 bytes")
 	}
 }
 
@@ -137,7 +139,7 @@ func (obj *ZObject) GetProperty(propertyId byte) (uint16, error) {
 		res |= uint16(obj.properties[propertyId][0]) << 8
 		res |= uint16(obj.properties[propertyId][1])
 	default:
-		panic("cannot get property, because its length is > 2 bytes")
+		log.Panic("cannot get property, because its length is > 2 bytes")
 	}
 
 	return res, nil
@@ -181,10 +183,15 @@ func (obj *ZObject) GetPropertyAddr(propertyId byte) uint16 {
 
 func ZObjectAddress(idx uint8, header *ZHeader) uint16 {
 	if idx < 1 {
-		panic("objects are numbered from 1 to 255")
+		log.Panic("objects are numbered from 1 to 255")
 	}
 	// v3 skip 31 words containing property default table
 	return uint16(header.objTblPos) + 31*2 + uint16(idx-1)*uint16(zobjectSize)
+}
+
+func ZObjectId(address uint16, header *ZHeader) uint8 {
+	res := (address - header.objTblPos - 31*2) / zobjectSize
+	return uint8(res) + 1
 }
 
 func ZObjectsCount(mem *ZMemory, header *ZHeader) uint8 {
