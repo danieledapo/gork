@@ -19,7 +19,7 @@ var zeroOpFuncs = []ZeroOpFunc{
 	nil,
 	nil,
 	nil,
-	nil,
+	ZRetPop,
 	nil,
 	nil,
 	ZNl,
@@ -278,8 +278,13 @@ func ZPull(zm *ZMachine, args []uint16) {
 }
 
 func ZPop(zm *ZMachine) {
-	// the same as ZPull?
 	zm.stack.Top().locals = zm.stack.Top().locals[:len(zm.stack.Top().locals)-1]
+}
+
+func ZRetPop(zm *ZMachine) {
+	ret := zm.stack.Top().locals[len(zm.stack.Top().locals)-1]
+	ZPop(zm)
+	ZReturn(zm, ret)
 }
 
 func ZInsertObj(zm *ZMachine, objectId uint16, newParentId uint16) {
