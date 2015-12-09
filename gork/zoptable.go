@@ -205,14 +205,14 @@ func ZMul(zm *ZMachine, lhs uint16, rhs uint16) {
 
 func ZDiv(zm *ZMachine, lhs uint16, rhs uint16) {
 	if rhs == 0 {
-		panic("division by zero error")
+		log.Fatal("division by zero error")
 	}
 	zm.StoreReturn(lhs / rhs)
 }
 
 func ZMod(zm *ZMachine, lhs uint16, rhs uint16) {
 	if rhs == 0 {
-		panic("mod by zero error")
+		log.Fatal("mod by zero error")
 	}
 	zm.StoreReturn(lhs % rhs)
 }
@@ -231,7 +231,7 @@ func ZNot(zm *ZMachine, arg uint16) {
 }
 
 func ZNOOP(_ *ZMachine, _ uint16, _ uint16) {
-	panic("NO OP 2OP")
+	log.Fatal("NO OP 2OP")
 }
 
 func ZLoad(zm *ZMachine, varnum uint16) {

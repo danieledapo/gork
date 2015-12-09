@@ -96,7 +96,7 @@ func (zop *ZOp) configureVar(op byte) {
 
 	for ; i >= 0; i -= 2 {
 		if (types>>byte(i))&0x03 != OMMITTED_CONSTANT {
-			log.Panic("non omitted type after omitted one!")
+			log.Fatal("non omitted type after omitted one!")
 		}
 	}
 

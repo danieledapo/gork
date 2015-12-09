@@ -89,7 +89,7 @@ func (obj *ZObject) readProperties(header *ZHeader) {
 
 func (obj *ZObject) SetProperty(propertyId byte, value uint16) {
 	if _, ok := obj.properties[propertyId]; !ok {
-		log.Panic(fmt.Sprintf("Property %d not found\n", propertyId))
+		log.Fatalf("Property %d not found\n", propertyId)
 	}
 
 	// TODO
@@ -117,13 +117,13 @@ func (obj *ZObject) SetProperty(propertyId byte, value uint16) {
 		obj.properties[propertyId][1] = byte(value & 0x00FF)
 		// obj.mem.WriteWordAt(addr, value)
 	default:
-		log.Panic("cannot set property, because its length is > 2 bytes")
+		log.Fatal("cannot set property, because its length is > 2 bytes")
 	}
 }
 
 func (obj *ZObject) GetProperty(propertyId byte) (uint16, error) {
 	if _, ok := obj.properties[propertyId]; !ok {
-		// don't panic, cause the property could be in the
+		// DON'T PANIC, cause the property could be in the
 		// global default properties table
 		return 0, errors.New(fmt.Sprintf("property %d not found\n", propertyId))
 	}
@@ -139,7 +139,7 @@ func (obj *ZObject) GetProperty(propertyId byte) (uint16, error) {
 		res |= uint16(obj.properties[propertyId][0]) << 8
 		res |= uint16(obj.properties[propertyId][1])
 	default:
-		log.Panic("cannot get property, because its length is > 2 bytes")
+		log.Fatal("cannot get property, because its length is > 2 bytes")
 	}
 
 	return res, nil
@@ -183,7 +183,7 @@ func (obj *ZObject) GetPropertyAddr(propertyId byte) uint16 {
 
 func ZObjectAddress(idx uint8, header *ZHeader) uint16 {
 	if idx < 1 {
-		log.Panic("objects are numbered from 1 to 255")
+		log.Fatal("objects are numbered from 1 to 255")
 	}
 	// v3 skip 31 words containing property default table
 	return uint16(header.objTblPos) + 31*2 + uint16(idx-1)*uint16(zobjectSize)

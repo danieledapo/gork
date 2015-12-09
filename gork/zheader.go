@@ -2,6 +2,7 @@ package gork
 
 import (
 	"fmt"
+	"log"
 )
 
 const (
@@ -39,7 +40,7 @@ func (header *ZHeader) configure(mem *ZMemory) {
 	header.version = seq.ReadByte()
 
 	if header.version > 3 {
-		panic("versions > 3 are not supported!")
+		log.Fatal("versions > 3 are not supported!")
 	}
 
 	header.config = seq.ReadByte()
@@ -56,11 +57,11 @@ func (header *ZHeader) configure(mem *ZMemory) {
 	header.dynMemSize = seq.ReadWord()
 
 	if header.dynMemSize < 64 {
-		panic("dynamic size cannot be < 64 bytes")
+		log.Fatal("dynamic size cannot be < 64 bytes")
 	}
 
 	if header.highStart < header.dynMemSize {
-		panic("invalid mem: high memory must not overlap dynamic memory")
+		log.Fatal("invalid mem: high memory must not overlap dynamic memory")
 	}
 
 	// who cares if dynMemSize + staticMemorySize(min(0xFFFF, fileSize)) < 64KB ?
@@ -77,7 +78,7 @@ func (header *ZHeader) configure(mem *ZMemory) {
 
 	// v3 max file length 128K
 	if header.fileLength > 128*1024 {
-		panic("mem file too big!")
+		log.Fatal("mem file too big!")
 	}
 
 	header.fileChecksum = seq.ReadWord()

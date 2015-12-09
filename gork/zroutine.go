@@ -2,6 +2,7 @@ package gork
 
 import (
 	"fmt"
+	"log"
 )
 
 // aka StackFrame
@@ -13,7 +14,7 @@ type ZRoutine struct {
 
 func NewZRoutine(seq *ZMemorySequential, retAddr uint16) *ZRoutine {
 	if !IsPackedAddress(seq.pos) {
-		panic("attempt to read routine at non packed address")
+		log.Fatal("attempt to read routine at non packed address")
 	}
 
 	// seq := mem.GetSequential(addr)

@@ -189,7 +189,7 @@ func (zm *ZMachine) ClearObjectParent(objectId uint8) {
 
 func (zm *ZMachine) ResetObjectParent(objectId uint8, newParentId uint8) {
 	if objectId == newParentId {
-		log.Panic("trying to set object's parent to the object itself,",
+		log.Fatal("trying to set object's parent to the object itself,",
 			"not sure is allowed")
 	}
 
@@ -211,7 +211,7 @@ func (zm *ZMachine) CalcJumpAddress(offset int32) uint16 {
 func (zm *ZMachine) GetDefaultProperty(propertyIdx byte) uint16 {
 	// v3
 	if propertyIdx < 1 || propertyIdx > 31 {
-		log.Panicf("Invalid propertyIndex %d, values range in v3 is [1,31]\n", propertyIdx)
+		log.Fatalf("Invalid propertyIndex %d, values range in v3 is [1,31]\n", propertyIdx)
 	}
 
 	// property table is a sequence of words
