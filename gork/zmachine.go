@@ -158,7 +158,7 @@ func (zm *ZMachine) Branch(conditionOk bool) {
 
 func (zm *ZMachine) CalcJumpAddress(offset int16) uint32 {
 	// Address after branch data + Offset - 2
-	return uint32(int32(zm.seq.pos) + int32(offset) - 2)
+	return uint32(int64(zm.seq.pos) + int32(offset) - 2)
 }
 
 func (zm *ZMachine) ClearObjectParent(objectId uint8) {
