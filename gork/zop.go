@@ -3,6 +3,9 @@ package gork
 import (
 	"fmt"
 	"log"
+	"reflect"
+	"runtime"
+	"strings"
 )
 
 const (
@@ -27,6 +30,7 @@ type ZOp struct {
 	class    byte
 	optypes  []byte
 	operands []uint16 // actually not all operands are large constants
+	name     string
 
 	// optional values are not read,
 	// the actual implementation of the functions will read them
@@ -62,6 +66,8 @@ func NewZOp(zm *ZMachine) *ZOp {
 		zop.configureLong(opcode)
 		// v3 ignore EXTENDED
 	}
+
+	zop.name = zop.getOpName()
 
 	return zop
 }
@@ -158,11 +164,39 @@ func (zop *ZOp) readOpType(optype byte) uint16 {
 	}
 }
 
+func (zop *ZOp) getOpName() string {
+	var fn interface{}
+	switch zop.class {
+	case ZEROOP:
+		fn = zeroOpFuncs[zop.opcode]
+	case ONEOP:
+		fn = oneOpFuncs[zop.opcode]
+	case TWOOP:
+		if zop.opcode == 1 {
+			// ZJe is a two op func but it accepts VAR count of args,
+			// so we must handle separetly
+			return "ZJe"
+		} else {
+			fn = twoOpFuncs[zop.opcode]
+		}
+	case VAROP:
+		fn = varOpFuncs[zop.opcode]
+	}
+	return getFuncName(fn)
+}
+
+func getFuncName(fn interface{}) string {
+	completeName := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
+	// keep only function name
+	return strings.Split(completeName, ".")[1]
+}
+
 func (zop *ZOp) String() string {
 	// not properly formatted
 
 	ret := ""
 
+	ret += fmt.Sprintln("  Op:", zop.name)
 	ret += fmt.Sprintf("  Opcode: %d ", zop.opcode)
 
 	switch zop.class {
