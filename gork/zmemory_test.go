@@ -8,6 +8,8 @@ import (
 // len must be multiple of 4
 var readTestData []byte = []byte{42, 73, 96, 7, 28, 1, 2, 3}
 var writeTestData []byte = []byte{3, 2, 1, 28, 7, 96, 73, 42}
+var zstring []byte = []byte{0x7E, 0x97, 0xC0, 0xA5}
+var zstringExpected string = "zork"
 
 var byteOrder binary.ByteOrder = binary.BigEndian
 
@@ -139,4 +141,28 @@ func TestPackedAddres(t *testing.T) {
 			t.Fail()
 		}
 	}
+}
+
+func TestZStringDecodeAt(t *testing.T) {
+	mem := ZMemory(zstring)
+
+	// in this case zstring doesn't have abbreviations,
+	// so don't pass the header
+	if mem.DecodeZStringAt(0, nil) != zstringExpected {
+		t.Fail()
+	}
+
+	// TODO test zstring with abbreviations :)
+}
+
+func TestZStringDecode(t *testing.T) {
+	mem := ZMemory(zstring)
+	seq := mem.GetSequential(0)
+
+	if mem.DecodeZStringAt(0, nil) != seq.DecodeZString(nil) ||
+		seq.pos != uint32(len(zstringExpected)) {
+		t.Fail()
+	}
+
+	// TODO test zstring with abbreviations :)
 }
