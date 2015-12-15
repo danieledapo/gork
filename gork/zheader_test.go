@@ -19,25 +19,27 @@ var headerBuf []byte = []byte{
 	0xa1, 0x29, // file checksum
 }
 
-func ZHeaderConfigureTest(t *testing.T) {
+var expectedHeader ZHeader = ZHeader{
+	version:      3,
+	config:       1,
+	release:      1,
+	highStart:    0x4E37,
+	pc:           0x4F05,
+	dictPos:      0x3B21,
+	objTblPos:    0x02B0,
+	globalsPos:   0x2271,
+	dynMemSize:   0x2E53,
+	serial:       [SerialSize]byte{0, 0, 0, 0, 0, 1},
+	abbrTblPos:   0x01F0,
+	fileLength:   uint64(0xA5C6) * 2,
+	fileChecksum: 0xA129,
+}
+
+func TestZHeaderConfigure(t *testing.T) {
 	mem := ZMemory(headerBuf)
 	header := NewZHeader(&mem)
 
-	shouldPass := header.config == 1 &&
-		header.version == 3 &&
-		header.release == 1 &&
-		header.highStart == 0x4E37 &&
-		header.pc == 0x4F05 &&
-		header.dictPos == 0x3B21 &&
-		header.objTblPos == 0x02B0 &&
-		header.globalsPos == 0x2271 &&
-		header.dynMemSize == 0x2E53 &&
-		header.serial == [SerialSize]byte{0, 0, 0, 0, 0, 1} &&
-		header.abbrTblPos == 0x01F0 &&
-		header.fileLength == uint64(0xA5C6)*2 &&
-		header.fileChecksum == 0xa129
-
-	if !shouldPass {
+	if *header != expectedHeader {
 		t.Fail()
 	}
 }
