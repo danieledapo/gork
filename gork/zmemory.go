@@ -4,6 +4,13 @@ import (
 	"fmt"
 )
 
+// v3
+var Alphabets = [3]string{
+	"abcdefghijklmnopqrstuvwxyz",
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+	" \n0123456789.,!?_#'\"/\\-:()",
+}
+
 type ZMemory []byte
 type ZMemorySequential struct {
 	mem *ZMemory
@@ -160,5 +167,5 @@ func IsPackedAddress(addr uint32) bool {
 }
 
 func (zmem *ZMemory) String() string {
-	return fmt.Sprintf("buf: %s\n", zmem)
+	return fmt.Sprintf("buf: %v\n", []byte(*zmem))
 }
