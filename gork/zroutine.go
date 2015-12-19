@@ -17,8 +17,6 @@ func NewZRoutine(seq *ZMemorySequential, retAddr uint32) *ZRoutine {
 		log.Fatal("attempt to read routine at non packed address")
 	}
 
-	// seq := mem.GetSequential(addr)
-
 	routine := new(ZRoutine)
 	routine.retAddr = retAddr
 
