@@ -165,28 +165,46 @@ func (zop *ZOp) readOpType(optype byte) uint16 {
 }
 
 func (zop *ZOp) getOpName() string {
-	var fn interface{}
+	var fn interface{} = nil
+
 	switch zop.class {
 	case ZEROOP:
-		fn = zeroOpFuncs[zop.opcode]
+		if int(zop.opcode) < len(zeroOpFuncs) {
+			fn = zeroOpFuncs[zop.opcode]
+		}
 	case ONEOP:
-		fn = oneOpFuncs[zop.opcode]
+		if int(zop.opcode) < len(oneOpFuncs) {
+			fn = oneOpFuncs[zop.opcode]
+		}
 	case TWOOP:
 		if zop.opcode == 1 {
 			// ZJe is a two op func but it accepts VAR count of args,
 			// so we must handle separetly
 			return "ZJe"
-		} else {
+		} else if int(zop.opcode) < len(twoOpFuncs) {
 			fn = twoOpFuncs[zop.opcode]
 		}
 	case VAROP:
-		fn = varOpFuncs[zop.opcode]
+		if int(zop.opcode) < len(varOpFuncs) {
+			fn = varOpFuncs[zop.opcode]
+		}
 	}
-	return getFuncName(fn)
+	return getFuncName(fn, "unknown opcode name")
 }
 
-func getFuncName(fn interface{}) string {
-	completeName := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
+func getFuncName(fn interface{}, errFnName string) string {
+	value := reflect.ValueOf(fn)
+
+	if !value.IsValid() {
+		return errFnName
+	}
+
+	completeName := runtime.FuncForPC(value.Pointer()).Name()
+
+	if completeName == "" {
+		return errFnName
+	}
+
 	// keep only function name
 	return strings.Split(completeName, ".")[1]
 }
