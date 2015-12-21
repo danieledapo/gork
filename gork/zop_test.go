@@ -1,9 +1,6 @@
 package gork
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 // TODO test VARIABLE_CONSTANT
 
@@ -101,9 +98,9 @@ func TestZOP(t *testing.T) {
 
 func TestGetOpName(t *testing.T) {
 	// must not crash
-	fmt.Println((&ZOp{class: TWOOP, opcode: 100}).getOpName())
-	fmt.Println((&ZOp{class: ONEOP, opcode: 99}).getOpName())
-	fmt.Println((&ZOp{class: TWOOP, opcode: 1}).getOpName())
-	fmt.Println((&ZOp{class: TWOOP, opcode: 4}).getOpName())
-	fmt.Println((&ZOp{class: ZEROOP, opcode: 99}).getOpName())
+	(&ZOp{class: TWOOP, opcode: 100}).getOpName()
+	(&ZOp{class: ONEOP, opcode: 99}).getOpName()
+	(&ZOp{class: TWOOP, opcode: 1}).getOpName()
+	(&ZOp{class: TWOOP, opcode: 4}).getOpName()
+	(&ZOp{class: ZEROOP, opcode: 99}).getOpName()
 }
