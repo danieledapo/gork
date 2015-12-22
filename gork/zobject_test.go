@@ -1,6 +1,9 @@
 package gork
 
-import "testing"
+import (
+	"encoding/binary"
+	"testing"
+)
 
 // attributes, parent, sibling, child
 // DO NOT STORE propPos it will be calculated!
@@ -13,9 +16,12 @@ var zobjectData [][]byte = [][]byte{
 // nameLength, optional name, props
 var zobjectProps [][]byte = [][]byte{
 	[]byte{0x00, 0xB2, 0x46, 0xDC, 0x42, 0xC2, 0x42, 0xB4, 0x10, 0x82, 0x00},
-	[]byte{0x04, 0x7E, 0x97, 0xC0, 0xA5, 0xB2, 0x46, 0xDC, 0x42, 0xC2, 0x42, 0xB4, 0x10, 0x82, 0x00},
-	[]byte{0x04, 0x23, 0xC8, 0xC6, 0x95, 0xB2, 0x46, 0xDC, 0x42, 0xC2, 0x42, 0xB4, 0x00},
+	[]byte{0x02, 0x7E, 0x97, 0xC0, 0xA5, 0xB2, 0x46, 0xDC, 0x42, 0xC2, 0x42, 0xB4, 0x30, 0x82, 0x21, 0x00},
+	[]byte{0x02, 0x23, 0xC8, 0xC6, 0x95, 0xB2, 0x46, 0xDC, 0x42, 0xC2, 0x42, 0xB4, 0x00},
 }
+
+const defaultPropByte byte = 0xFF
+const defaultPropWord uint16 = uint16(defaultPropByte)<<8 | uint16(defaultPropByte)
 
 // TODO generate automatically propertiesPos
 var zobjectExpected []ZObject = []ZObject{
@@ -42,7 +48,7 @@ var zobjectExpected []ZObject = []ZObject{
 		propertiesPos: 0x0064,
 		properties: map[byte][]byte{
 			18: []byte{0x46, 0xDC, 0x42, 0xC2, 0x42, 0xB4},
-			16: []byte{0x82},
+			16: []byte{0x82, 0x21},
 		},
 	},
 	ZObject{
@@ -52,7 +58,7 @@ var zobjectExpected []ZObject = []ZObject{
 		sibling:       2,
 		child:         0,
 		name:          "cyclop",
-		propertiesPos: 0x0073,
+		propertiesPos: 0x0074,
 		properties: map[byte][]byte{
 			18: []byte{0x46, 0xDC, 0x42, 0xC2, 0x42, 0xB4},
 		},
@@ -75,8 +81,8 @@ func createZObjectBuf() []byte {
 	ret := make([]byte, 31*2)
 
 	for i := range ret {
-		// default properties are all 0s in this case
-		ret[i] = 0x00
+		// default properties are all 0xFFs in this case
+		ret[i] = defaultPropByte
 	}
 
 	firstPropPos := uint16(len(ret)) + uint16(len(zobjectData))*uint16(zobjectSize)
@@ -97,17 +103,28 @@ func createZObjectBuf() []byte {
 	return ret
 }
 
-func TestZObject(t *testing.T) {
+func prelude() (*ZMemory, *ZHeader, uint8) {
 	mem := ZMemory(createZObjectBuf())
 	header := &ZHeader{objTblPos: 0x00}
 
 	count := ZObjectsCount(&mem, header)
+
+	return &mem, header, count
+}
+
+func TestZObjectCount(t *testing.T) {
+	_, _, count := prelude()
+
 	if count != uint8(len(zobjectExpected)) {
 		t.Fail()
 	}
+}
+
+func TestZObject(t *testing.T) {
+	mem, header, count := prelude()
 
 	for i := uint8(0); i < count; i++ {
-		obj := NewZObject(&mem, i+1, header)
+		obj := NewZObject(mem, i+1, header)
 		expected := zobjectExpected[i]
 
 		if obj.number != expected.number ||
@@ -117,7 +134,7 @@ func TestZObject(t *testing.T) {
 			obj.child != expected.child ||
 			obj.name != expected.name ||
 			obj.propertiesPos != expected.propertiesPos ||
-			obj.mem != &mem {
+			obj.mem != mem {
 			t.Fail()
 		}
 
@@ -142,6 +159,152 @@ func TestZObject(t *testing.T) {
 			}
 		}
 
+	}
+}
+
+func TestZObjectGetProperty(t *testing.T) {
+	mem, header, count := prelude()
+
+	for i := byte(0); i < count; i++ {
+		obj := NewZObject(mem, i+1, header)
+		good := zobjectExpected[i]
+
+		for key, prop := range good.properties {
+			if len(prop) <= 2 {
+				rProp := obj.GetProperty(key)
+
+				if len(prop) == 1 {
+					if rProp != uint16(prop[0]) {
+						t.Fail()
+					}
+				} else if rProp != binary.BigEndian.Uint16(prop) {
+					t.Fail()
+				}
+			}
+		}
+
+		// should return default property
+		if _, ok := obj.properties[31]; !ok && obj.GetProperty(31) != defaultPropWord {
+			t.Fail()
+		}
+	}
+}
+
+func TestZObjectSetProperty(t *testing.T) {
+	mem, header, count := prelude()
+
+	for i := byte(0); i < count; i++ {
+		obj := NewZObject(mem, i+1, header)
+
+		var expected uint16
+
+		for id, prop := range obj.properties {
+			ok := true
+			switch len(prop) {
+			case 1:
+				expected = uint16(defaultPropByte)
+			case 2:
+				expected = defaultPropWord
+			default:
+				ok = false
+			}
+
+			if ok {
+				obj.SetProperty(id, expected)
+				if obj.GetProperty(id) != expected {
+					t.Fail()
+				}
+			}
+		}
+	}
+}
+
+func TestZObjectPropertyLen(t *testing.T) {
+	mem, header, count := prelude()
+
+	for i := byte(0); i < count; i++ {
+		obj := NewZObject(mem, i+1, header)
+
+		seq := mem.GetSequential(uint32(obj.propertiesPos))
+		if seq.ReadByte() != 0 {
+			// skip name
+			seq.DecodeZString(header)
+		}
+		// skip dataSize
+		seq.ReadByte()
+
+		propertyPos := uint16(seq.pos)
+
+		for _, k := range obj.PropertiesIds() {
+			prop := obj.properties[k]
+
+			if GetPropertyLen(mem, uint32(propertyPos)) != uint16(len(prop)) {
+				t.Fail()
+			}
+
+			// skip propData and next dataSize
+			propertyPos += uint16(len(prop)) + 1
+		}
+	}
+}
+
+func TestZObjectGetFirstPropertyAddr(t *testing.T) {
+	mem, header, count := prelude()
+
+	for i := byte(0); i < count; i++ {
+		obj := NewZObject(mem, i+1, header)
+
+		seq := mem.GetSequential(uint32(obj.propertiesPos))
+
+		if seq.ReadByte() != 0 {
+			// skip name
+			seq.DecodeZString(header)
+		}
+
+		if obj.GetFirstPropertyAddr() != seq.pos {
+			t.Fail()
+		}
+	}
+}
+
+func TestZObjectGetPropertyAddr(t *testing.T) {
+	mem, header, count := prelude()
+
+	for i := byte(0); i < count; i++ {
+		obj := NewZObject(mem, i+1, header)
+
+		seq := mem.GetSequential(uint32(obj.propertiesPos))
+
+		if seq.ReadByte() != 0 {
+			// skip name
+			seq.DecodeZString(header)
+		}
+		propPos := seq.pos
+
+		keys := obj.PropertiesIds()
+
+		if len(keys) > 0 && obj.GetPropertyAddr(keys[0]) != obj.GetFirstPropertyAddr() {
+			t.Fail()
+		}
+
+		// v3
+		keyIdx := 0
+		for propId := byte(31); propId > 0; propId-- {
+			expected := uint32(0)
+			if keyIdx < len(keys) && keys[keyIdx] == propId {
+				expected = propPos
+				keyIdx++
+
+				// skip size
+				propPos++
+				propPos += uint32(len(zobjectExpected[i].properties[propId]))
+			}
+
+			if obj.GetPropertyAddr(byte(propId)) != expected {
+				t.Fail()
+			}
+
+		}
 	}
 }
 

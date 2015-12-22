@@ -209,17 +209,6 @@ func (zm *ZMachine) ResetObjectParent(objectId uint8, newParentId uint8) {
 	zm.objects[objectId-1].parent = newParentId
 }
 
-func (zm *ZMachine) GetDefaultProperty(propertyIdx byte) uint16 {
-	// v3
-	if propertyIdx < 1 || propertyIdx > 31 {
-		log.Fatalf("Invalid propertyIndex %d, values range in v3 is [1,31]\n", propertyIdx)
-	}
-
-	// property table is a sequence of words
-	addr := uint32(zm.header.objTblPos) + uint32((propertyIdx-1)*2)
-	return zm.seq.mem.WordAt(addr)
-}
-
 func (zm *ZMachine) InterpretAll() {
 	for !zm.quitted {
 		zm.Interpret()

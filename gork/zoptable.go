@@ -318,13 +318,7 @@ func ZPutProp(zm *ZMachine, args []uint16) {
 }
 
 func ZGetProp(zm *ZMachine, objectId uint16, propertyId uint16) {
-	res, err := zm.objects[objectId-1].GetProperty(byte(propertyId))
-
-	if err != nil {
-		// get default one
-		res = zm.GetDefaultProperty(byte(propertyId))
-	}
-
+	res := zm.objects[objectId-1].GetProperty(byte(propertyId))
 	zm.StoreReturn(res)
 }
 

@@ -1,7 +1,6 @@
 package gork
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -24,6 +23,7 @@ type ZObject struct {
 	propertiesPos uint16
 	properties    map[byte][]byte
 	mem           *ZMemory
+	header        *ZHeader
 }
 
 func NewZObject(mem *ZMemory, number uint8, header *ZHeader) *ZObject {
@@ -36,6 +36,7 @@ func (obj *ZObject) configure(mem *ZMemory, number uint8, header *ZHeader) {
 	obj.number = number
 
 	obj.mem = mem
+	obj.header = header
 
 	seq := mem.GetSequential(ZObjectAddress(number, header))
 
@@ -121,11 +122,19 @@ func (obj *ZObject) SetProperty(propertyId byte, value uint16) {
 	}
 }
 
-func (obj *ZObject) GetProperty(propertyId byte) (uint16, error) {
+func (obj *ZObject) GetProperty(propertyId byte) uint16 {
 	if _, ok := obj.properties[propertyId]; !ok {
 		// DON'T PANIC, cause the property could be in the
 		// global default properties table
-		return 0, errors.New(fmt.Sprintf("property %d not found\n", propertyId))
+
+		// v3
+		if propertyId < 1 || propertyId > 31 {
+			log.Fatalf("Invalid propertyIndex %d, values range in v3 is [1,31]\n", propertyId)
+		}
+
+		// property table is a sequence of words
+		addr := uint32(obj.header.objTblPos) + uint32((propertyId-1)*2)
+		return obj.mem.WordAt(addr)
 	}
 
 	res := uint16(0)
@@ -142,7 +151,7 @@ func (obj *ZObject) GetProperty(propertyId byte) (uint16, error) {
 		log.Fatal("cannot get property, because its length is > 2 bytes")
 	}
 
-	return res, nil
+	return res
 }
 
 func GetPropertyLen(mem *ZMemory, propertyPos uint32) uint16 {
@@ -164,7 +173,6 @@ func (obj *ZObject) GetPropertyAddr(propertyId byte) uint32 {
 
 	for {
 		size := obj.mem.ByteAt(addr)
-		addr++
 
 		propno := size & 0x1F
 
@@ -177,6 +185,9 @@ func (obj *ZObject) GetPropertyAddr(propertyId byte) uint32 {
 		if propno == propertyId {
 			return addr
 		}
+		// skip size
+		addr++
+
 		addr += uint32((size >> 5) + 1)
 	}
 }
@@ -229,6 +240,22 @@ func ZObjectsCount(mem *ZMemory, header *ZHeader) uint8 {
 	return count - 1
 }
 
+func (obj *ZObject) PropertiesIds() []byte {
+	var keys []int
+	for k := range obj.properties {
+		keys = append(keys, int(k))
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
+
+	ret := make([]byte, len(keys))
+
+	for i, v := range keys {
+		ret[i] = byte(v)
+	}
+
+	return ret
+}
+
 func (obj *ZObject) String() string {
 	ret := ""
 
@@ -255,16 +282,10 @@ func (obj *ZObject) String() string {
 
 	ret += fmt.Sprintln("          Properties:")
 
-	var keys []int
-	for k := range obj.properties {
-		keys = append(keys, int(k))
-	}
-	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
-
-	for _, k := range keys {
+	for _, k := range obj.PropertiesIds() {
 		ret += fmt.Sprintf("              [%2d] ", k)
-		for b := range obj.properties[byte(k)] {
-			ret += fmt.Sprintf("%02X ", obj.properties[byte(k)][b])
+		for b := range obj.properties[k] {
+			ret += fmt.Sprintf("%02X ", obj.properties[k][b])
 		}
 		ret += fmt.Sprintln("")
 	}
