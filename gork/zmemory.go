@@ -172,13 +172,10 @@ func ZStringEncode(what string) [encodedZstringLen]uint16 {
 	offset := 10
 
 	writeChar := func(ch byte) {
-		// fmt.Printf("got 0x%2X char is 0x%2X\n", ch, uint16(ch)<<uint8(offset))
-
 		ret[curWordIdx] |= uint16(ch) << uint8(offset)
 		offset -= 5
 
 		if offset < 0 {
-			// fmt.Printf("word %d is 0x%2X\n", curWordIdx, ret[curWordIdx])
 			// new word
 			offset = 10
 			curWordIdx++
@@ -186,7 +183,6 @@ func ZStringEncode(what string) [encodedZstringLen]uint16 {
 	}
 
 	for c := range what {
-		// fmt.Printf("%c\n", what[c])
 		i := strings.IndexByte(Alphabets[0], what[c])
 		if i < 0 {
 			// v3
@@ -202,9 +198,6 @@ func ZStringEncode(what string) [encodedZstringLen]uint16 {
 		writeChar(byte(i + 6))
 
 	}
-
-	// end of the word
-	// ret[curWordIdx] |= 1 << 15
 
 	for curWordIdx < encodedZstringLen {
 		writeChar(padding)
