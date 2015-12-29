@@ -2,6 +2,7 @@ package gork
 
 import (
 	"encoding/binary"
+	"fmt"
 	"testing"
 )
 
@@ -15,6 +16,20 @@ var zstrings [][]byte = [][]byte{
 var zstringsExpected []string = []string{
 	"zork",
 	"cyclop",
+}
+
+var encodedZstrings []string = []string{
+	"zork",
+	"cyclop",
+	"i",
+	"42,",
+}
+var encodedZstringsExpected [][]uint16 = [][]uint16{
+	[]uint16{0x7E97, 0xC0A5},
+	[]uint16{0x23C8, 0xC695},
+	[]uint16{0x38A5, 0x94A5},
+	// todo following!
+	[]uint16{0x38A5, 0x94A5},
 }
 
 var byteOrder binary.ByteOrder = binary.BigEndian
@@ -177,5 +192,31 @@ func TestZStringDecode(t *testing.T) {
 		}
 
 		// TODO test zstring with abbreviations :)
+	}
+}
+
+func TestZStringEncode(t *testing.T) {
+	for i, zstr := range encodedZstrings {
+		// if zstr != "i" {
+		// 	continue
+		// }
+		expected := encodedZstringsExpected[i]
+		encoded := ZStringEncode(zstr)
+
+		hexDump := func(buf []uint16) {
+			for c := range buf {
+				fmt.Printf("%2X ", buf[c])
+			}
+			fmt.Println()
+		}
+		hexDump([]uint16{encoded[0], encoded[1]})
+		hexDump(expected)
+
+		for i := range encoded {
+			if encoded[i] != expected[i] {
+				t.Fail()
+			}
+		}
+
 	}
 }

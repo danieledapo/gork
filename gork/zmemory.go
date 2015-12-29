@@ -2,7 +2,12 @@ package gork
 
 import (
 	"fmt"
+	"strings"
 )
+
+// v3
+// number of words, not characters!
+const encodedZstringLen int = 2
 
 // v3
 var Alphabets = [3]string{
@@ -152,6 +157,61 @@ func (zmem *ZMemorySequential) DecodeZString(header *ZHeader) string {
 			}
 		}
 	}
+
+	return ret
+}
+
+func ZStringEncode(what string) [encodedZstringLen]uint16 {
+	const padding byte = 0x05
+
+	ret := [encodedZstringLen]uint16{}
+
+	what = strings.ToLower(what)
+
+	curWordIdx := 0
+	offset := 10
+
+	writeChar := func(ch byte) {
+		// fmt.Printf("got 0x%2X char is 0x%2X\n", ch, uint16(ch)<<uint8(offset))
+
+		ret[curWordIdx] |= uint16(ch) << uint8(offset)
+		offset -= 5
+
+		if offset < 0 {
+			// fmt.Printf("word %d is 0x%2X\n", curWordIdx, ret[curWordIdx])
+			// new word
+			offset = 10
+			curWordIdx++
+		}
+	}
+
+	for c := range what {
+		// fmt.Printf("%c\n", what[c])
+		i := strings.IndexByte(Alphabets[0], what[c])
+		if i < 0 {
+			// v3
+			// shift to A2
+			writeChar(0x05)
+			i = strings.IndexByte(Alphabets[2], what[c])
+		}
+
+		if i < 0 {
+			panic("TODO")
+		}
+
+		writeChar(byte(i + 6))
+
+	}
+
+	// end of the word
+	// ret[curWordIdx] |= 1 << 15
+
+	for curWordIdx < encodedZstringLen {
+		writeChar(padding)
+	}
+
+	// end of the string
+	ret[encodedZstringLen-1] |= 1 << 15
 
 	return ret
 }
