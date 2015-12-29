@@ -192,7 +192,8 @@ func ZStringEncode(what string) [encodedZstringLen]uint16 {
 		}
 
 		if i < 0 {
-			panic("TODO")
+			// :)
+			i = strings.IndexByte(Alphabets[2], '?')
 		}
 
 		writeChar(byte(i + 6))
