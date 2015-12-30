@@ -161,7 +161,9 @@ func GetPropertyLen(mem *ZMemory, propertyPos uint32) uint16 {
 	return uint16(nbytes)
 }
 
-func (obj *ZObject) GetFirstPropertyAddr() uint32 {
+func (obj *ZObject) GetFirstPropertySizeAddr() uint32 {
+	// returns the address of the size byte
+
 	// text length is in words
 	textLength := obj.mem.ByteAt(uint32(obj.propertiesPos))
 	return uint32(obj.propertiesPos) + 1 + uint32(textLength)*2
@@ -169,7 +171,7 @@ func (obj *ZObject) GetFirstPropertyAddr() uint32 {
 
 func (obj *ZObject) GetPropertyAddr(propertyId byte) uint32 {
 	// v3
-	addr := obj.GetFirstPropertyAddr()
+	addr := obj.GetFirstPropertySizeAddr()
 
 	for {
 		size := obj.mem.ByteAt(addr)
@@ -182,11 +184,11 @@ func (obj *ZObject) GetPropertyAddr(propertyId byte) uint32 {
 			return 0
 		}
 
+		// skip size
+		addr++
 		if propno == propertyId {
 			return addr
 		}
-		// skip size
-		addr++
 
 		addr += uint32((size >> 5) + 1)
 	}

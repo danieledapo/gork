@@ -33,7 +33,7 @@ var oneOpFuncs = []OneOpFunc{
 	ZGetSibling,
 	ZGetChild,
 	ZGetParent,
-	nil,
+	ZGetPropLen,
 	ZInc,
 	nil,
 	ZPrintAt,
@@ -52,10 +52,10 @@ var twoOpFuncs = []TwoOpFunc{
 	nil, // ZJe is a two op func but it accepts VAR count of args
 	ZJl,
 	ZJg,
-	nil,
+	ZDecChk,
 	ZIncChk,
 	ZJin,
-	nil,
+	ZTest,
 	ZOr,
 	ZAnd,
 	ZTestAttr,
@@ -66,7 +66,7 @@ var twoOpFuncs = []TwoOpFunc{
 	ZLoadW,
 	ZLoadB,
 	ZGetProp,
-	nil,
+	ZGetPropAddr,
 	nil,
 	ZAdd,
 	ZSub,
@@ -298,6 +298,10 @@ func ZInsertObj(zm *ZMachine, objectId uint16, newParentId uint16) {
 func ZJin(zm *ZMachine, childId uint16, parentId uint16) {
 	condition := zm.objects[childId-1].parent == uint8(parentId)
 	zm.Branch(condition)
+}
+
+func ZTest(zm *ZMachine, bitmap uint16, flags uint16) {
+	zm.Branch(bitmap&flags == flags)
 }
 
 func ZGetSibling(zm *ZMachine, objectId uint16) {

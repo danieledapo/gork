@@ -261,7 +261,7 @@ func TestZObjectGetFirstPropertyAddr(t *testing.T) {
 			seq.DecodeZString(header)
 		}
 
-		if obj.GetFirstPropertyAddr() != seq.pos {
+		if obj.GetFirstPropertySizeAddr() != seq.pos {
 			t.Fail()
 		}
 	}
@@ -279,11 +279,12 @@ func TestZObjectGetPropertyAddr(t *testing.T) {
 			// skip name
 			seq.DecodeZString(header)
 		}
+
 		propPos := seq.pos
 
 		keys := obj.PropertiesIds()
 
-		if len(keys) > 0 && obj.GetPropertyAddr(keys[0]) != obj.GetFirstPropertyAddr() {
+		if len(keys) > 0 && obj.GetPropertyAddr(keys[0]) != obj.GetFirstPropertySizeAddr()+1 {
 			t.Fail()
 		}
 
@@ -291,12 +292,15 @@ func TestZObjectGetPropertyAddr(t *testing.T) {
 		keyIdx := 0
 		for propId := byte(31); propId > 0; propId-- {
 			expected := uint32(0)
-			if keyIdx < len(keys) && keys[keyIdx] == propId {
-				expected = propPos
-				keyIdx++
 
+			if keyIdx < len(keys) && keys[keyIdx] == propId {
 				// skip size
 				propPos++
+
+				expected = propPos
+
+				keyIdx++
+
 				propPos += uint32(len(zobjectExpected[i].properties[propId]))
 			}
 

@@ -1,9 +1,6 @@
 package gork
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 var dictBuf []byte = []byte{
 	3,
@@ -63,7 +60,6 @@ func TestZDictionarySearch(t *testing.T) {
 		"golang",
 	}
 
-	fmt.Println(dict.words)
 	for i, w := range dictExpected.words {
 		pos := dictExpected.entriesPos + uint32(i)*uint32(dictExpected.entrySize)
 
