@@ -276,9 +276,11 @@ func ZPush(zm *ZMachine, args []uint16) {
 
 func ZPull(zm *ZMachine, args []uint16) {
 	varnum := args[0]
-	zm.stack.Top().locals = append(zm.stack.Top().locals[:varnum],
-		zm.stack.Top().locals[varnum+1:]...)
-	// should not zm.StoreReturn popped value
+
+	r := zm.stack.Top().locals[len(zm.stack.Top().locals)-1]
+	ZPop(zm)
+
+	zm.StoreVarAt(byte(varnum), r)
 }
 
 func ZPop(zm *ZMachine) {
