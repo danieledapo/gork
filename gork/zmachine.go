@@ -27,10 +27,11 @@ func (zstack *ZStack) Top() *ZRoutine {
 type ZMachine struct {
 	header *ZHeader
 	// pc is seq.pos
-	seq     *ZMemorySequential
-	objects []*ZObject
-	stack   ZStack
-	quitted bool
+	seq        *ZMemorySequential
+	objects    []*ZObject
+	dictionary *ZDictionary
+	stack      ZStack
+	quitted    bool
 }
 
 func NewZMachine(mem *ZMemory, header *ZHeader) *ZMachine {
@@ -47,11 +48,12 @@ func NewZMachine(mem *ZMemory, header *ZHeader) *ZMachine {
 	stack.Push(MainRoutine(mem, header))
 
 	return &ZMachine{
-		header:  header,
-		seq:     mem.GetSequential(uint32(header.pc)),
-		objects: objects,
-		quitted: false,
-		stack:   stack,
+		header:     header,
+		seq:        mem.GetSequential(uint32(header.pc)),
+		objects:    objects,
+		dictionary: NewZDictionary(mem, header),
+		quitted:    false,
+		stack:      stack,
 	}
 }
 

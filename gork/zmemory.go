@@ -89,6 +89,16 @@ func (zmem *ZMemorySequential) ReadUint32() uint32 {
 	return tmp
 }
 
+func (zmem *ZMemorySequential) WriteByte(b byte) {
+	zmem.mem.WriteByteAt(zmem.pos, b)
+	zmem.pos++
+}
+
+func (zmem *ZMemorySequential) WriteWord(w uint16) {
+	zmem.mem.WriteWordAt(zmem.pos, w)
+	zmem.pos += 2
+}
+
 func (zmem *ZMemory) DecodeZStringAt(addr uint32, header *ZHeader) string {
 	return zmem.GetSequential(addr).DecodeZString(header)
 }

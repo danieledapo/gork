@@ -1,8 +1,11 @@
 package gork
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 )
 
 type ZeroOpFunc func(*ZMachine)
@@ -77,7 +80,7 @@ var varOpFuncs = []VarOpFunc{
 	ZStoreW,
 	ZStoreB,
 	ZPutProp,
-	nil,
+	ZRead,
 	ZPrintChar,
 	ZPrintNum,
 	nil,
@@ -369,4 +372,56 @@ func ZIncChk(zm *ZMachine, varnum uint16, value uint16) {
 func ZDecChk(zm *ZMachine, varnum uint16, value uint16) {
 	newValue := zm.UpdateVarAt(byte(varnum), -1)
 	zm.Branch(int16(newValue) < int16(value))
+}
+
+func ZRead(zm *ZMachine, args []uint16) {
+	textPos := uint32(args[0])
+	parseTblPos := uint32(args[1])
+
+	r := bufio.NewReader(os.Stdin)
+
+	s, err := r.ReadString('\n')
+	if err != nil {
+		panic(err)
+	}
+
+	seq := zm.seq.mem.GetSequential(textPos)
+
+	maxLen := int(seq.ReadByte()) + 1
+	if maxLen < len(s) {
+		s = s[:maxLen]
+	}
+	// doubling ToLower :(
+	s = strings.ToLower(s)
+
+	for i := range s {
+		seq.WriteByte(s[i])
+	}
+
+	// ignore incomplete reads :)
+
+	words := SplitSentence(s, string(zm.dictionary.wordSeparators))
+
+	seq = zm.seq.mem.GetSequential(parseTblPos)
+	maxWords := seq.ReadByte()
+	if int(maxWords) < len(words) {
+		words = words[:maxWords]
+	}
+
+	seq.WriteByte(byte(len(words)))
+
+	lastWordPos := byte(0)
+	for _, w := range words {
+		// 4 byte block
+		// word: address of word searched in the dict
+		// byte: #chars of the word
+		// byte: position of the first letter of the word in text-buffer
+
+		seq.WriteWord(zm.dictionary.Search(w))
+		seq.WriteByte(uint8(len(w)))
+		seq.WriteByte(lastWordPos)
+
+		lastWordPos += byte(len(w))
+	}
+
 }

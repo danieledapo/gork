@@ -2,12 +2,14 @@ package gork
 
 import (
 	"fmt"
+	"sort"
 )
 
 type ZDictionary struct {
 	wordSeparators []byte
 	entrySize      uint8
 	words          []string
+	entriesPos     uint32
 	// ignore words data, it looks like they are useless to interpreters
 }
 
@@ -27,6 +29,8 @@ func NewZDictionary(mem *ZMemory, header *ZHeader) *ZDictionary {
 
 	entryCount := seq.ReadWord()
 
+	zdict.entriesPos = seq.pos
+
 	for i := uint16(0); i < entryCount; i++ {
 		word := mem.DecodeZStringAt(seq.pos, header)
 		zdict.words = append(zdict.words, word)
@@ -34,6 +38,17 @@ func NewZDictionary(mem *ZMemory, header *ZHeader) *ZDictionary {
 	}
 
 	return zdict
+}
+
+func (dict *ZDictionary) Search(s string) uint16 {
+	i := sort.SearchStrings(dict.words, s)
+
+	if i < len(dict.words) && dict.words[i] == s {
+		return uint16(dict.entriesPos + uint32(i)*uint32(dict.entrySize))
+	}
+
+	// not found
+	return 0
 }
 
 func (zdict *ZDictionary) String() string {

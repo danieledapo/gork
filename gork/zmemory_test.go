@@ -2,6 +2,7 @@ package gork
 
 import (
 	"encoding/binary"
+	"fmt"
 	"testing"
 )
 
@@ -149,6 +150,38 @@ func TestReadUint32(t *testing.T) {
 
 	for i := uint32(0); i < uint32(len(mem)/4); i++ {
 		if seq.pos != uint32(i*4) || seq.ReadUint32() != seq.mem.UInt32At(i*4) {
+			t.Fail()
+		}
+	}
+}
+
+func TestWriteByte(t *testing.T) {
+	mem := ZMemory(readTestData)
+	seq := mem.GetSequential(0)
+
+	for i := range readTestData {
+		seq.WriteByte(writeTestData[i])
+		if mem.ByteAt(uint32(i)) != writeTestData[i] || seq.pos != uint32(i+1) {
+			t.Fail()
+		}
+	}
+}
+
+func TestWriteWord(t *testing.T) {
+	mem := ZMemory(readTestData)
+	seq := mem.GetSequential(0)
+
+	for i := uint32(0); i < uint32(len(readTestData)/2); i++ {
+		if seq.pos != i*2 {
+			t.Fail()
+		}
+
+		toWrite := byteOrder.Uint16(writeTestData[i : i+2])
+		seq.WriteWord(toWrite)
+
+		if toWrite != mem.WordAt(i*2) {
+			fmt.Println("hey")
+
 			t.Fail()
 		}
 	}
