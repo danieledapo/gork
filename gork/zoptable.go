@@ -153,7 +153,7 @@ func ZJump(zm *ZMachine, offset uint16) {
 	// this is not a branch instruction
 	// jumping to an instruction in a different routine is permitted,
 	// but the standard consider it bad practice :)
-	zm.seq.pos = zm.CalcJumpAddress(int16(offset))
+	zm.seq.pos = zm.CalcJumpAddress(int32(int16(offset)))
 }
 
 func ZPrint(zm *ZMachine) {

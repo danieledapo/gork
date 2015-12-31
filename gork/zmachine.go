@@ -121,17 +121,17 @@ func (zm *ZMachine) Branch(conditionOk bool) {
 	branchOnTrue := (info >> 7) != 0x00
 
 	// offset is relative to current PC and it can be negative
-	var offset int16
+	var offset int32
 
 	// if bit #6 is set than the offset is stored in the bottom
 	// 6 bits
 	if info&0x40 != 0x00 {
-		offset = int16(info & 0x3F)
+		offset = int32(info & 0x3F)
 	} else {
 		// if bit #6 is clear than the offset is store in a 14 bit signed
 		// integer composed by the bottom 5 bits of info and 8 bits of an
 		// additional byte
-		firstPart := info & 0x3F
+		firstPart := uint16(info & 0x3F)
 
 		// if sign bit(#6) is set then it's a negative number
 		// in two complement form, so set the bits #6 and #7 too
@@ -139,7 +139,7 @@ func (zm *ZMachine) Branch(conditionOk bool) {
 			firstPart |= 0x3 << 6
 		}
 
-		offset = int16(firstPart<<8) | int16(zm.seq.ReadByte())
+		offset = int32(int16(firstPart<<8) | int16(zm.seq.ReadByte()))
 	}
 
 	// jump if conditionOk and branchOnTrue are both true or false
@@ -158,7 +158,7 @@ func (zm *ZMachine) Branch(conditionOk bool) {
 	}
 }
 
-func (zm *ZMachine) CalcJumpAddress(offset int16) uint32 {
+func (zm *ZMachine) CalcJumpAddress(offset int32) uint32 {
 	// Address after branch data + Offset - 2
 	return uint32(int64(zm.seq.pos) + int64(offset) - 2)
 }
