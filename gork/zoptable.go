@@ -391,6 +391,8 @@ func ZRead(zm *ZMachine, args []uint16) {
 		panic(err)
 	}
 
+	log.Printf("Read %s", s)
+
 	seq := zm.seq.mem.GetSequential(textPos)
 
 	maxLen := int(seq.ReadByte()) + 1
