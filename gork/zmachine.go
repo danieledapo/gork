@@ -178,7 +178,7 @@ func (zm *ZMachine) ClearObjectParent(objectId uint8) {
 			parent.child = obj.sibling
 		} else {
 			// we are among the siblings so update previous one
-			curChildId := obj.parent
+			curChildId := parent.child
 			prevChildId := NULL_OBJECT_INDEX
 
 			for curChildId != objectId && curChildId != NULL_OBJECT_INDEX {
