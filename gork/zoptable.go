@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 )
 
 type ZeroOpFunc func(*ZMachine)
@@ -35,7 +37,7 @@ var oneOpFuncs = []OneOpFunc{
 	ZGetParent,
 	ZGetPropLen,
 	ZInc,
-	nil,
+	ZDec,
 	ZPrintAt,
 	nil,
 	nil,
@@ -83,7 +85,7 @@ var varOpFuncs = []VarOpFunc{
 	ZRead,
 	ZPrintChar,
 	ZPrintNum,
-	nil,
+	ZRandom,
 	ZPush,
 	ZPull,
 }
@@ -441,4 +443,20 @@ func ZRead(zm *ZMachine, args []uint16) {
 		lastWordPos += byte(len(w))
 	}
 
+}
+
+func ZRandom(zm *ZMachine, args []uint16) {
+	value := int16(args[0])
+
+	retVal := uint16(0)
+
+	if value > 0 {
+		retVal = uint16(rand.Intn(int(value)) + 1)
+	} else if value < 0 {
+		rand.Seed(int64(value))
+	} else {
+		rand.Seed(time.Now().Unix())
+	}
+
+	zm.StoreReturn(retVal)
 }
