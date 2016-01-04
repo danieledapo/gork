@@ -139,11 +139,11 @@ func ZJe(zm *ZMachine, args []uint16) {
 }
 
 func ZJl(zm *ZMachine, lhs uint16, rhs uint16) {
-	zm.Branch(lhs < rhs)
+	zm.Branch(int16(lhs) < int16(rhs))
 }
 
 func ZJg(zm *ZMachine, lhs uint16, rhs uint16) {
-	zm.Branch(lhs > rhs)
+	zm.Branch(int16(lhs) > int16(rhs))
 }
 
 func ZJ0(zm *ZMachine, op uint16) {
