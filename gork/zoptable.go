@@ -60,7 +60,7 @@ var twoOpFuncs = []TwoOpFunc{
 	ZAnd,
 	ZTestAttr,
 	ZSetAttr,
-	nil,
+	ZClearAttr,
 	ZStore,
 	ZInsertObj,
 	ZLoadW,
@@ -418,6 +418,11 @@ func ZRead(zm *ZMachine, args []uint16) {
 
 	lastWordPos := byte(0)
 	for _, w := range words {
+		// truncate words to the max entrysize
+		if len(w) > int(zm.dictionary.entrySize)-1 {
+			w = w[:zm.dictionary.entrySize-1]
+		}
+
 		// 4 byte block
 		// word: address of word searched in the dict
 		// byte: #chars of the word
