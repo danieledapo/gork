@@ -399,12 +399,14 @@ func ZRead(zm *ZMachine, args []uint16) {
 	if maxLen < len(s) {
 		s = s[:maxLen]
 	}
-	// doubling ToLower :(
-	s = strings.ToLower(s)
+	// doubling ToLower and Trim :(
+	s = strings.Trim(strings.ToLower(s), " \r\n")
 
 	for i := range s {
 		seq.WriteByte(s[i])
 	}
+	// null terminator
+	seq.WriteByte(0)
 
 	// ignore incomplete reads :)
 
@@ -418,9 +420,11 @@ func ZRead(zm *ZMachine, args []uint16) {
 
 	seq.WriteByte(byte(len(words)))
 
-	lastWordPos := byte(0)
+	// byte #0 is maxLen, so start from byte #1
+	lastWordPos := byte(1)
 	for _, w := range words {
 		// truncate words to the max entrysize
+		originalLen := len(w)
 		if len(w) > int(zm.dictionary.entrySize)-1 {
 			w = w[:zm.dictionary.entrySize-1]
 		}
@@ -431,7 +435,7 @@ func ZRead(zm *ZMachine, args []uint16) {
 		// byte: position of the first letter of the word in text-buffer
 
 		seq.WriteWord(zm.dictionary.Search(w))
-		seq.WriteByte(uint8(len(w)))
+		seq.WriteByte(uint8(originalLen))
 		seq.WriteByte(lastWordPos)
 
 		lastWordPos += byte(len(w))
