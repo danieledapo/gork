@@ -3,6 +3,7 @@ package gork
 import (
 	"encoding/binary"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -16,11 +17,13 @@ var writeTestData []byte = []byte{3, 2, 1, 28, 7, 96, 73, 42}
 var zstrings [][]byte = [][]byte{
 	[]byte{0x7E, 0x97, 0xC0, 0xA5},
 	[]byte{0x23, 0xC8, 0xC6, 0x95},
+	[]byte{0x80, 0xA5},
 	[]byte{0x84, 0x05, 0x00, 0x02, 0x7E, 0x97, 0xC0, 0xA5},
 }
 var zstringsExpected []string = []string{
 	"zork",
 	"cyclop",
+	" ",
 	"zork",
 }
 
@@ -29,12 +32,14 @@ var encodedZstrings []string = []string{
 	"cyclop",
 	"i",
 	"42,",
+	"$",
 }
 var encodedZstringsExpected [][]uint16 = [][]uint16{
 	[]uint16{0x7E97, 0xC0A5},
 	[]uint16{0x23C8, 0xC695},
 	[]uint16{0x38A5, 0x94A5},
 	[]uint16{0x1585, 0xA8B3},
+	[]uint16{0x16A5, 0x94A5},
 }
 
 var byteOrder binary.ByteOrder = binary.BigEndian
@@ -214,14 +219,12 @@ func TestZStringDecodeAt(t *testing.T) {
 }
 
 func TestZStringDecode(t *testing.T) {
-	for i, zstring := range zstrings {
+	for _, zstring := range zstrings {
 		mem := ZMemory(zstring)
 		seq := mem.GetSequential(0)
 
-		if mem.DecodeZStringAt(0, header) != seq.DecodeZString(header) ||
-			seq.pos > uint32(len(zstringsExpected[i])) {
-			// cannot be sure where seq.pos will be, just do the best
-			// we can
+		if mem.DecodeZStringAt(0, header) != seq.DecodeZString(header) {
+			// cannot be sure where seq.pos will be
 
 			t.Fail()
 		}
@@ -235,6 +238,7 @@ func TestZStringEncode(t *testing.T) {
 
 		for i := range encoded {
 			if encoded[i] != expected[i] {
+				fmt.Printf("%X %X\n", encoded[i], expected[i])
 				t.Fail()
 			}
 
@@ -245,8 +249,25 @@ func TestZStringEncode(t *testing.T) {
 			}
 
 			seq := ZMemory(buf)
-			if seq.DecodeZStringAt(0, nil) != zstr {
-				t.Fail()
+			decoded := seq.DecodeZStringAt(0, nil)
+
+			for j := range decoded {
+				ch := decoded[j]
+
+				// default value if not found
+				expCh := byte('?')
+
+				for _, alph := range Alphabets {
+					if strings.IndexByte(alph, ch) >= 0 {
+						expCh = ch
+						break
+					}
+				}
+
+				if ch != expCh {
+					t.Fail()
+				}
+
 			}
 		}
 
