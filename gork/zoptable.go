@@ -296,7 +296,7 @@ func ZRetPop(zm *ZMachine) {
 }
 
 func ZInsertObj(zm *ZMachine, objectId uint16, newParentId uint16) {
-	zm.ResetObjectParent(uint8(objectId), uint8(newParentId))
+	zm.objects[objectId-1].ChangeParent(uint8(newParentId), zm.objects)
 }
 
 func ZJin(zm *ZMachine, childId uint16, parentId uint16) {

@@ -194,6 +194,52 @@ func (obj *ZObject) GetPropertyAddr(propertyId byte) uint32 {
 	}
 }
 
+func (obj *ZObject) MakeOrphan(other []*ZObject) {
+	// TODO
+	// the same doubts of ZObject get/set properties apply here
+	// refer to the comment in zobject.go:SetProperty for
+	// better understanding
+
+	if obj.parent != NULL_OBJECT_INDEX {
+		parent := other[obj.parent-1]
+		if parent.child == obj.number {
+			// obj is the first child so move to sibling
+			parent.child = obj.sibling
+		} else {
+			// we are among the siblings so update previous one
+			curChildId := parent.child
+			prevChildId := NULL_OBJECT_INDEX
+
+			for curChildId != obj.number && curChildId != NULL_OBJECT_INDEX {
+				prevChildId = curChildId
+				curChildId = other[curChildId-1].sibling
+			}
+			// TODO
+			// sanity checks
+
+			// update sibling to next one
+			other[prevChildId-1].sibling = obj.sibling
+		}
+	}
+	obj.parent = NULL_OBJECT_INDEX
+}
+
+func (obj *ZObject) ChangeParent(newParentId uint8, other []*ZObject) {
+	if obj.number == newParentId {
+		log.Fatal("trying to set object's parent to the object itself,",
+			"not sure is allowed")
+	}
+
+	obj.MakeOrphan(other)
+
+	// change object so that its sibling is the first child of parent
+	// set parent's child to objectId
+	// set child's parent to the newParent
+	other[obj.number-1].sibling = other[newParentId-1].child
+	other[newParentId-1].child = obj.number
+	other[obj.number-1].parent = newParentId
+}
+
 func ZObjectAddress(idx uint8, header *ZHeader) uint32 {
 	if idx < 1 {
 		log.Fatal("objects are numbered from 1 to 255")
