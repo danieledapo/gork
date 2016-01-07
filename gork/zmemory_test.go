@@ -6,16 +6,22 @@ import (
 	"testing"
 )
 
+var header *ZHeader = &ZHeader{
+	abbrTblPos: 2,
+}
+
 // len must be multiple of 4
 var readTestData []byte = []byte{42, 73, 96, 7, 28, 1, 2, 3}
 var writeTestData []byte = []byte{3, 2, 1, 28, 7, 96, 73, 42}
 var zstrings [][]byte = [][]byte{
 	[]byte{0x7E, 0x97, 0xC0, 0xA5},
 	[]byte{0x23, 0xC8, 0xC6, 0x95},
+	[]byte{0x84, 0x05, 0x00, 0x02, 0x7E, 0x97, 0xC0, 0xA5},
 }
 var zstringsExpected []string = []string{
 	"zork",
 	"cyclop",
+	"zork",
 }
 
 var encodedZstrings []string = []string{
@@ -201,11 +207,9 @@ func TestZStringDecodeAt(t *testing.T) {
 
 		// in this case zstring doesn't have abbreviations,
 		// so don't pass the header
-		if mem.DecodeZStringAt(0, nil) != zstringsExpected[i] {
+		if mem.DecodeZStringAt(0, header) != zstringsExpected[i] {
 			t.Fail()
 		}
-
-		// TODO test zstring with abbreviations :)
 	}
 }
 
@@ -214,15 +218,13 @@ func TestZStringDecode(t *testing.T) {
 		mem := ZMemory(zstring)
 		seq := mem.GetSequential(0)
 
-		if mem.DecodeZStringAt(0, nil) != seq.DecodeZString(nil) ||
+		if mem.DecodeZStringAt(0, header) != seq.DecodeZString(header) ||
 			seq.pos > uint32(len(zstringsExpected[i])) {
 			// cannot be sure where seq.pos will be, just do the best
 			// we can
 
 			t.Fail()
 		}
-
-		// TODO test zstring with abbreviations :)
 	}
 }
 
