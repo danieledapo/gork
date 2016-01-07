@@ -304,6 +304,26 @@ func (obj *ZObject) PropertiesIds() []byte {
 	return ret
 }
 
+func (obj *ZObject) Id() uint8 {
+	return obj.number
+}
+
+func (obj *ZObject) Name() string {
+	return obj.name
+}
+
+func (obj *ZObject) ParentId() uint8 {
+	return obj.parent
+}
+
+func (obj *ZObject) SiblingId() uint8 {
+	return obj.sibling
+}
+
+func (obj *ZObject) ChildId() uint8 {
+	return obj.child
+}
+
 func (obj *ZObject) String() string {
 	ret := ""
 
@@ -340,53 +360,4 @@ func (obj *ZObject) String() string {
 	ret += fmt.Sprintln("")
 
 	return ret
-}
-
-func DumpAllZObjects(mem *ZMemory, header *ZHeader) {
-	total := ZObjectsCount(mem, header)
-
-	fmt.Print("\n    **** Objects ****\n\n")
-	fmt.Printf("  Object count = %d\n\n", total)
-
-	for i := uint8(1); i <= total; i++ {
-		fmt.Printf("%3d. %s", i, NewZObject(mem, i, header))
-	}
-}
-
-func DumpZObjectsTree(mem *ZMemory, header *ZHeader) {
-
-	fmt.Print("\n    **** Object tree ****\n\n")
-
-	total := ZObjectsCount(mem, header)
-
-	var printObject func(obj *ZObject, depth int)
-	printObject = func(obj *ZObject, depth int) {
-		for {
-
-			for j := 0; j < depth; j++ {
-				fmt.Print(" . ")
-			}
-			fmt.Printf("[%3d] ", obj.number)
-			fmt.Printf("\"%s\"\n", obj.name)
-
-			if obj.child != 0 {
-				childobj := NewZObject(mem, obj.child, header)
-				printObject(childobj, depth+1)
-			}
-
-			if obj.sibling == 0 {
-				break
-			}
-			obj = NewZObject(mem, obj.sibling, header)
-		}
-	}
-
-	for i := uint8(1); i <= total; i++ {
-		zobj := NewZObject(mem, i, header)
-
-		// root
-		if zobj.parent == 0 {
-			printObject(zobj, 0)
-		}
-	}
 }

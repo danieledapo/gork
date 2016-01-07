@@ -1,9 +1,5 @@
 package gork
 
-import (
-	"fmt"
-)
-
 // v3 3 tables * 32 entries each
 const abbrCount = 32 * 3
 
@@ -19,19 +15,4 @@ func GetAbbreviations(mem *ZMemory, header *ZHeader) []string {
 	}
 
 	return ret
-}
-
-func DumpAbbreviations(mem *ZMemory, header *ZHeader) {
-	fmt.Print("\n    **** Abbreviations ****\n\n")
-
-	abbrs := GetAbbreviations(mem, header)
-
-	if len(abbrs) == 0 {
-		fmt.Printf("  No abbreviation information.\n")
-		return
-	}
-
-	for i, abbr := range abbrs {
-		fmt.Printf("  [%2d] \"%s\"\n", i, abbr)
-	}
 }

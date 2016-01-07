@@ -54,15 +54,15 @@ func dumpStoryInfo(story string, conf *config) {
 	}
 
 	if conf.showObjects {
-		gork.DumpAllZObjects(mem, header)
+		DumpAllZObjects(mem, header)
 	}
 
 	if conf.showObjectTree {
-		gork.DumpZObjectsTree(mem, header)
+		DumpZObjectsTree(mem, header)
 	}
 
 	if conf.showAbbreviations {
-		gork.DumpAbbreviations(mem, header)
+		DumpAbbreviations(mem, header)
 	}
 
 	if conf.showDictionary {
@@ -70,4 +70,69 @@ func dumpStoryInfo(story string, conf *config) {
 	}
 
 	fmt.Println("")
+}
+
+func DumpAbbreviations(mem *gork.ZMemory, header *gork.ZHeader) {
+	fmt.Print("\n    **** Abbreviations ****\n\n")
+
+	abbrs := gork.GetAbbreviations(mem, header)
+
+	if len(abbrs) == 0 {
+		fmt.Printf("  No abbreviation information.\n")
+		return
+	}
+
+	for i, abbr := range abbrs {
+		fmt.Printf("  [%2d] \"%s\"\n", i, abbr)
+	}
+}
+
+func DumpAllZObjects(mem *gork.ZMemory, header *gork.ZHeader) {
+	total := gork.ZObjectsCount(mem, header)
+
+	fmt.Print("\n    **** Objects ****\n\n")
+	fmt.Printf("  Object count = %d\n\n", total)
+
+	for i := uint8(1); i <= total; i++ {
+		fmt.Printf("%3d. %s", i, gork.NewZObject(mem, i, header))
+	}
+}
+
+func DumpZObjectsTree(mem *gork.ZMemory, header *gork.ZHeader) {
+
+	fmt.Print("\n    **** Object tree ****\n\n")
+
+	total := gork.ZObjectsCount(mem, header)
+
+	var printObject func(obj *gork.ZObject, depth int)
+	printObject = func(obj *gork.ZObject, depth int) {
+		for {
+
+			for j := 0; j < depth; j++ {
+				fmt.Print(" . ")
+			}
+			fmt.Printf("[%3d] ", obj.Id())
+			fmt.Printf("\"%s\"\n", obj.Name())
+
+			if obj.ChildId() != 0 {
+				childobj := gork.NewZObject(mem, obj.ChildId(), header)
+				printObject(childobj, depth+1)
+			}
+
+			if obj.SiblingId() == 0 {
+				break
+			}
+			obj = gork.NewZObject(mem, obj.SiblingId(), header)
+		}
+	}
+
+	for i := uint8(1); i <= total; i++ {
+		zobj := gork.NewZObject(mem, i, header)
+
+		// root
+		if zobj.ParentId() == 0 {
+			printObject(zobj, 0)
+			break
+		}
+	}
 }
