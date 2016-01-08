@@ -3,7 +3,6 @@ package gork
 import (
 	"encoding/binary"
 	"fmt"
-	"strings"
 	"testing"
 )
 
@@ -33,13 +32,15 @@ var encodedZstrings []string = []string{
 	"i",
 	"42,",
 	"$",
+	"\n",
 }
 var encodedZstringsExpected [][]uint16 = [][]uint16{
 	[]uint16{0x7E97, 0xC0A5},
 	[]uint16{0x23C8, 0xC695},
 	[]uint16{0x38A5, 0x94A5},
 	[]uint16{0x1585, 0xA8B3},
-	[]uint16{0x16A5, 0x94A5},
+	[]uint16{0x14C1, 0x90A5},
+	[]uint16{0x14E5, 0x94A5},
 }
 
 var byteOrder binary.ByteOrder = binary.BigEndian
@@ -238,7 +239,6 @@ func TestZStringEncode(t *testing.T) {
 
 		for i := range encoded {
 			if encoded[i] != expected[i] {
-				fmt.Printf("%X %X\n", encoded[i], expected[i])
 				t.Fail()
 			}
 
@@ -251,23 +251,8 @@ func TestZStringEncode(t *testing.T) {
 			seq := ZMemory(buf)
 			decoded := seq.DecodeZStringAt(0, nil)
 
-			for j := range decoded {
-				ch := decoded[j]
-
-				// default value if not found
-				expCh := byte('?')
-
-				for _, alph := range Alphabets {
-					if strings.IndexByte(alph, ch) >= 0 {
-						expCh = ch
-						break
-					}
-				}
-
-				if ch != expCh {
-					t.Fail()
-				}
-
+			if decoded != zstr {
+				t.Fail()
 			}
 		}
 

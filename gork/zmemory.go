@@ -150,8 +150,6 @@ func (zmem *ZMemorySequential) DecodeZString(header *ZHeader) string {
 
 				if alphabet == 2 && code == 0 {
 					asciiPart = 1
-				} else if alphabet == 2 && code == 1 {
-					ret += "\n"
 				} else {
 					ret += string(Alphabets[alphabet][code])
 				}
@@ -202,8 +200,10 @@ func ZStringEncode(what string) [encodedZstringLen]uint16 {
 		}
 
 		if i < 0 {
-			// :)
-			i = strings.IndexByte(Alphabets[2], '?')
+			// 10 bit zscii
+			writeChar(0x06)
+			writeChar(what[c] >> 5)
+			writeChar(what[c] & 0x1F)
 		}
 
 		writeChar(byte(i + 6))
