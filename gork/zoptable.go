@@ -40,7 +40,7 @@ var oneOpFuncs = []OneOpFunc{
 	ZDec,
 	ZPrintAt,
 	nil,
-	nil,
+	ZMakeObjOrphan,
 	ZPrintObject,
 	ZReturn,
 	ZJump,
@@ -297,6 +297,10 @@ func ZRetPop(zm *ZMachine) {
 
 func ZInsertObj(zm *ZMachine, objectId uint16, newParentId uint16) {
 	zm.objects[objectId-1].ChangeParent(uint8(newParentId), zm.objects)
+}
+
+func ZMakeObjOrphan(zm *ZMachine, objectId uint16) {
+	zm.objects[objectId-1].MakeOrphan(zm.objects)
 }
 
 func ZJin(zm *ZMachine, childId uint16, parentId uint16) {
