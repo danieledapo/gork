@@ -70,7 +70,7 @@ var twoOpFuncs = []TwoOpFunc{
 	ZLoadB,
 	ZGetProp,
 	ZGetPropAddr,
-	nil,
+	ZGetNextProp,
 	ZAdd,
 	ZSub,
 	ZMul,
@@ -336,6 +336,11 @@ func ZPutProp(zm *ZMachine, args []uint16) {
 func ZGetProp(zm *ZMachine, objectId uint16, propertyId uint16) {
 	res := zm.objects[objectId-1].GetProperty(byte(propertyId))
 	zm.StoreReturn(res)
+}
+
+func ZGetNextProp(zm *ZMachine, objectId uint16, prop uint16) {
+	res := zm.objects[objectId-1].NextProperty(byte(prop))
+	zm.StoreReturn(uint16(res))
 }
 
 func ZGetPropLen(zm *ZMachine, propertyAddr uint16) {

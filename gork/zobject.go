@@ -240,6 +240,28 @@ func (obj *ZObject) ChangeParent(newParentId uint8, other []*ZObject) {
 	other[obj.number-1].parent = newParentId
 }
 
+func (obj *ZObject) NextProperty(prop byte) byte {
+	// props are sorted in descending order
+
+	if prop == 0 {
+		max := byte(0)
+		for p, _ := range obj.properties {
+			if p > max {
+				max = p
+			}
+		}
+		return max
+	} else {
+		nextMaxProp := byte(0)
+		for p, _ := range obj.properties {
+			if p < prop && p > nextMaxProp {
+				nextMaxProp = p
+			}
+		}
+		return nextMaxProp
+	}
+}
+
 func ZObjectAddress(idx uint8, header *ZHeader) uint32 {
 	if idx < 1 {
 		log.Fatal("objects are numbered from 1 to 255")

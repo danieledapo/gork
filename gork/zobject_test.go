@@ -312,6 +312,28 @@ func TestZObjectGetPropertyAddr(t *testing.T) {
 	}
 }
 
+func TestZObjectNextProperty(t *testing.T) {
+	mem, header, count := prelude()
+
+	for i := byte(0); i < count; i++ {
+		obj := NewZObject(mem, i+1, header)
+
+		exp := zobjectExpected[i]
+
+		prop := obj.NextProperty(0)
+		for _, p := range exp.PropertiesIds() {
+			if prop != p {
+				t.Fail()
+			}
+			prop = obj.NextProperty(prop)
+		}
+
+		if prop != 0 {
+			t.Fail()
+		}
+	}
+}
+
 func TestZObjectId(t *testing.T) {
 	header := &ZHeader{objTblPos: 0}
 	for i := byte(0); i < 255; i++ {
