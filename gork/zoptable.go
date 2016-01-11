@@ -3,6 +3,7 @@ package gork
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -393,7 +394,7 @@ func ZRead(zm *ZMachine, args []uint16) {
 	r := bufio.NewReader(os.Stdin)
 
 	s, err := r.ReadString('\n')
-	if err != nil {
+	if err != nil && err != io.EOF {
 		panic(err)
 	}
 

@@ -6,10 +6,22 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
-	logfile, err := os.Create("gork.log")
+	if len(os.Args) < 2 {
+		fmt.Println("Please provide a game")
+	}
+
+	story := os.Args[1]
+
+	buf, err := ioutil.ReadFile(story)
+	if err != nil {
+		panic(err)
+	}
+
+	logfile, err := os.Create(strings.Split(story, ".")[0] + ".log")
 	if err != nil {
 		panic(err)
 	}
@@ -17,14 +29,6 @@ func main() {
 
 	log.SetOutput(logfile)
 
-	// test only Zork :)
-	buf, err := ioutil.ReadFile("zork1.z5")
-	// buf, err := ioutil.ReadFile("zork2.z5")
-	// buf, err := ioutil.ReadFile("zork3.z5")
-	// buf, err := ioutil.ReadFile("hhgg.z3")
-	if err != nil {
-		panic(err)
-	}
 	mem := gork.NewZMemory(buf)
 
 	header := gork.NewZHeader(mem)
