@@ -206,7 +206,8 @@ func getFuncName(fn interface{}, errFnName string) string {
 	}
 
 	// keep only function name
-	return strings.Split(completeName, ".")[1]
+	parts := strings.Split(completeName, "/")
+	return strings.Split(parts[len(parts)-1], ".")[1]
 }
 
 func (zop *ZOp) String() string {
