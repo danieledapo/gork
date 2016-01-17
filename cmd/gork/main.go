@@ -34,7 +34,7 @@ func main() {
 
 	header := gork.NewZHeader(mem)
 
-	gork.NewZMachine(mem, header).InterpretAll()
+	gork.NewZMachine(mem, header, gork.ZTerminal{}).InterpretAll()
 
 	fmt.Println("")
 }

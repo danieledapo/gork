@@ -1,12 +1,9 @@
 package gork
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"math/rand"
-	"os"
 	"strings"
 	"time"
 )
@@ -161,40 +158,40 @@ func ZJump(zm *ZMachine, offset uint16) {
 
 func ZPrint(zm *ZMachine) {
 	str := zm.seq.DecodeZString(zm.header)
-	fmt.Print(str)
+	zm.iodev.Print(str)
 }
 
 func ZPrintRet(zm *ZMachine) {
 	ZPrint(zm)
-	fmt.Println("")
+	ZNl(zm)
 	ZReturnTrue(zm)
 }
 
 func ZPrintObject(zm *ZMachine, obj uint16) {
 	// objects are 1-based
-	fmt.Print(zm.objects[obj-1].name)
+	zm.iodev.Print(zm.objects[obj-1].name)
 }
 
 func ZPrintAt(zm *ZMachine, addr uint16) {
 	str := zm.seq.mem.DecodeZStringAt(uint32(addr), zm.header)
-	fmt.Print(str)
+	zm.iodev.Print(str)
 }
 
 func ZPrintAtPacked(zm *ZMachine, paddr uint16) {
 	str := zm.seq.mem.DecodeZStringAt(PackedAddress(uint32(paddr)), zm.header)
-	fmt.Print(str)
+	zm.iodev.Print(str)
 }
 
 func ZPrintNum(zm *ZMachine, args []uint16) {
-	fmt.Print(args[0])
+	zm.iodev.Print(args[0])
 }
 
 func ZPrintChar(zm *ZMachine, args []uint16) {
 	// print only ASCII
 	if args[0] == 13 {
-		fmt.Println("")
+		ZNl(zm)
 	} else if args[0] >= 32 && args[0] <= 126 {
-		fmt.Printf("%c", args[0])
+		zm.iodev.Print(fmt.Sprintf("%c", args[0]))
 	} // ignore everything else
 }
 
@@ -370,8 +367,8 @@ func ZClearAttr(zm *ZMachine, objectId uint16, attrId uint16) {
 	zm.objects[objectId-1].attributes[attrId] = false
 }
 
-func ZNl(_ *ZMachine) {
-	fmt.Println("")
+func ZNl(zm *ZMachine) {
+	zm.iodev.Print("\n")
 }
 
 func ZInc(zm *ZMachine, varnum uint16) {
@@ -396,12 +393,7 @@ func ZRead(zm *ZMachine, args []uint16) {
 	textPos := uint32(args[0])
 	parseTblPos := uint32(args[1])
 
-	r := bufio.NewReader(os.Stdin)
-
-	s, err := r.ReadString('\n')
-	if err != nil && err != io.EOF {
-		panic(err)
-	}
+	s := zm.iodev.ReadLine()
 
 	log.Printf("Read %s", s)
 

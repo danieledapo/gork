@@ -30,11 +30,12 @@ type ZMachine struct {
 	seq        *ZMemorySequential
 	objects    []*ZObject
 	dictionary *ZDictionary
+	iodev      ZIODev
 	stack      ZStack
 	quitted    bool
 }
 
-func NewZMachine(mem *ZMemory, header *ZHeader) *ZMachine {
+func NewZMachine(mem *ZMemory, header *ZHeader, iodev ZIODev) *ZMachine {
 	// cache objects
 	count := ZObjectsCount(mem, header)
 	objects := make([]*ZObject, count)
@@ -52,6 +53,7 @@ func NewZMachine(mem *ZMemory, header *ZHeader) *ZMachine {
 		seq:        mem.GetSequential(uint32(header.pc)),
 		objects:    objects,
 		dictionary: NewZDictionary(mem, header),
+		iodev:      iodev,
 		quitted:    false,
 		stack:      stack,
 	}
