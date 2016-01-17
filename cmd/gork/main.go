@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/d-dorazio/gork/gork"
@@ -13,6 +14,7 @@ import (
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Please provide a game")
+		return
 	}
 
 	story := os.Args[1]
@@ -22,7 +24,7 @@ func main() {
 		panic(err)
 	}
 
-	logfile, err := os.Create(strings.Split(story, ".")[0] + ".log")
+	logfile, err := os.Create(storyLogFilename(story))
 	if err != nil {
 		panic(err)
 	}
@@ -35,6 +37,13 @@ func main() {
 	header := gork.NewZHeader(mem)
 
 	gork.NewZMachine(mem, header, gork.ZTerminal{}).InterpretAll()
+}
 
-	fmt.Println("")
+func storyLogFilename(story string) string {
+	name := path.Base(story)
+	tmp := strings.Split(name, ".")
+	if len(tmp) > 1 {
+		name = tmp[0]
+	}
+	return name + ".log"
 }
