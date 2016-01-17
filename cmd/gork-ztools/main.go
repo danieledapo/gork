@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gork/gork"
 	"io/ioutil"
+
+	"github.com/d-dorazio/gork/gork"
 )
 
 type config struct {

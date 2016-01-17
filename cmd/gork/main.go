@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"gork/gork"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/d-dorazio/gork/gork"
 )
 
 func main() {
