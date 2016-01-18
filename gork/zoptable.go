@@ -2,7 +2,6 @@ package gork
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"strings"
 	"time"
@@ -108,12 +107,12 @@ func ZCall(zm *ZMachine, operands []uint16) {
 			routine.locals[i] = v
 		}
 	}
-	log.Print("Call ", routine)
+	zm.logger.Print("Call ", routine)
 }
 
 func ZReturn(zm *ZMachine, retValue uint16) {
 	zm.seq.pos = zm.stack.Pop().retAddr
-	log.Printf("Returning to 0x%X\n", zm.seq.pos)
+	zm.logger.Printf("Returning to 0x%X\n", zm.seq.pos)
 	zm.StoreReturn(retValue)
 }
 
@@ -209,14 +208,14 @@ func ZMul(zm *ZMachine, lhs uint16, rhs uint16) {
 
 func ZDiv(zm *ZMachine, lhs uint16, rhs uint16) {
 	if rhs == 0 {
-		log.Fatal("division by zero error")
+		zm.logger.Panic("division by zero error")
 	}
 	zm.StoreReturn(lhs / rhs)
 }
 
 func ZMod(zm *ZMachine, lhs uint16, rhs uint16) {
 	if rhs == 0 {
-		log.Fatal("mod by zero error")
+		zm.logger.Panic("mod by zero error")
 	}
 	zm.StoreReturn(lhs % rhs)
 }
@@ -234,8 +233,8 @@ func ZNot(zm *ZMachine, arg uint16) {
 	zm.StoreReturn(^arg)
 }
 
-func ZNOOP(_ *ZMachine, _ uint16, _ uint16) {
-	log.Fatal("NO OP 2OP")
+func ZNOOP(zm *ZMachine, _ uint16, _ uint16) {
+	zm.logger.Panic("NO OP 2OP")
 }
 
 func ZLoad(zm *ZMachine, varnum uint16) {
@@ -331,7 +330,10 @@ func ZPutProp(zm *ZMachine, args []uint16) {
 }
 
 func ZGetProp(zm *ZMachine, objectId uint16, propertyId uint16) {
-	res := zm.objects[objectId-1].GetProperty(byte(propertyId))
+	res, err := zm.objects[objectId-1].GetProperty(byte(propertyId))
+	if err != nil {
+		zm.logger.Panic(err)
+	}
 	zm.StoreReturn(res)
 }
 
@@ -395,7 +397,7 @@ func ZRead(zm *ZMachine, args []uint16) {
 
 	s := zm.iodev.ReadLine()
 
-	log.Printf("Read %s", s)
+	zm.logger.Printf("Read %s", s)
 
 	seq := zm.seq.mem.GetSequential(textPos)
 

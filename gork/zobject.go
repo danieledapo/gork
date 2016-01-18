@@ -1,8 +1,8 @@
 package gork
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"sort"
 )
 
@@ -26,19 +26,27 @@ type ZObject struct {
 	header        *ZHeader
 }
 
-func NewZObject(mem *ZMemory, number uint8, header *ZHeader) *ZObject {
+func NewZObject(mem *ZMemory, number uint8, header *ZHeader) (*ZObject, error) {
 	obj := new(ZObject)
-	obj.configure(mem, number, header)
-	return obj
+	if err := obj.configure(mem, number, header); err != nil {
+		return nil, err
+	}
+	return obj, nil
 }
 
-func (obj *ZObject) configure(mem *ZMemory, number uint8, header *ZHeader) {
+func (obj *ZObject) configure(mem *ZMemory, number uint8, header *ZHeader) error {
 	obj.number = number
 
 	obj.mem = mem
 	obj.header = header
 
-	seq := mem.GetSequential(ZObjectAddress(number, header))
+	addr, err := ZObjectAddress(number, header)
+
+	if err != nil {
+		return err
+	}
+
+	seq := mem.GetSequential(addr)
 
 	// v3 attributes is 32 bit
 	// more significant bit <-> attribute # smaller
@@ -60,6 +68,7 @@ func (obj *ZObject) configure(mem *ZMemory, number uint8, header *ZHeader) {
 	obj.propertiesPos = seq.ReadWord()
 
 	obj.readProperties(header)
+	return nil
 }
 
 func (obj *ZObject) readProperties(header *ZHeader) {
@@ -88,9 +97,9 @@ func (obj *ZObject) readProperties(header *ZHeader) {
 	}
 }
 
-func (obj *ZObject) SetProperty(propertyId byte, value uint16) {
+func (obj *ZObject) SetProperty(propertyId byte, value uint16) error {
 	if _, ok := obj.properties[propertyId]; !ok {
-		log.Fatalf("Property %d not found\n", propertyId)
+		return errors.New(fmt.Sprintf("Property %d not found\n", propertyId))
 	}
 
 	// TODO
@@ -118,23 +127,24 @@ func (obj *ZObject) SetProperty(propertyId byte, value uint16) {
 		obj.properties[propertyId][1] = byte(value & 0x00FF)
 		// obj.mem.WriteWordAt(addr, value)
 	default:
-		log.Fatal("cannot set property, because its length is > 2 bytes")
+		return errors.New(fmt.Sprintf("cannot set property, because its length is > 2 bytes"))
 	}
+	return nil
 }
 
-func (obj *ZObject) GetProperty(propertyId byte) uint16 {
+func (obj *ZObject) GetProperty(propertyId byte) (uint16, error) {
 	if _, ok := obj.properties[propertyId]; !ok {
 		// DON'T PANIC, cause the property could be in the
 		// global default properties table
 
 		// v3
 		if propertyId < 1 || propertyId > 31 {
-			log.Fatalf("Invalid propertyIndex %d, values range in v3 is [1,31]\n", propertyId)
+			return 0, errors.New(fmt.Sprintf("Invalid propertyIndex %d, values range in v3 is [1,31]\n", propertyId))
 		}
 
 		// property table is a sequence of words
 		addr := uint32(obj.header.objTblPos) + uint32((propertyId-1)*2)
-		return obj.mem.WordAt(addr)
+		return obj.mem.WordAt(addr), nil
 	}
 
 	res := uint16(0)
@@ -148,10 +158,10 @@ func (obj *ZObject) GetProperty(propertyId byte) uint16 {
 		res |= uint16(obj.properties[propertyId][0]) << 8
 		res |= uint16(obj.properties[propertyId][1])
 	default:
-		log.Fatal("cannot get property, because its length is > 2 bytes")
+		return 0, errors.New("cannot get property, because its length is > 2 bytes")
 	}
 
-	return res
+	return res, nil
 }
 
 func GetPropertyLen(mem *ZMemory, propertyPos uint32) uint16 {
@@ -224,10 +234,9 @@ func (obj *ZObject) MakeOrphan(other []*ZObject) {
 	obj.parent = NULL_OBJECT_INDEX
 }
 
-func (obj *ZObject) ChangeParent(newParentId uint8, other []*ZObject) {
+func (obj *ZObject) ChangeParent(newParentId uint8, other []*ZObject) error {
 	if obj.number == newParentId {
-		log.Fatal("trying to set object's parent to the object itself,",
-			"not sure is allowed")
+		return errors.New("trying to set object's parent to the object itself, not sure is allowed")
 	}
 
 	obj.MakeOrphan(other)
@@ -238,6 +247,8 @@ func (obj *ZObject) ChangeParent(newParentId uint8, other []*ZObject) {
 	other[obj.number-1].sibling = other[newParentId-1].child
 	other[newParentId-1].child = obj.number
 	other[obj.number-1].parent = newParentId
+
+	return nil
 }
 
 func (obj *ZObject) NextProperty(prop byte) byte {
@@ -262,12 +273,13 @@ func (obj *ZObject) NextProperty(prop byte) byte {
 	}
 }
 
-func ZObjectAddress(idx uint8, header *ZHeader) uint32 {
+func ZObjectAddress(idx uint8, header *ZHeader) (uint32, error) {
 	if idx < 1 {
-		log.Fatal("objects are numbered from 1 to 255")
+		return 0, errors.New("objects are numbered from 1 to 255")
 	}
 	// v3 skip 31 words containing property default table
-	return uint32(header.objTblPos) + 31*2 + uint32(idx-1)*zobjectSize
+	addr := uint32(header.objTblPos) + 31*2 + uint32(idx-1)*zobjectSize
+	return addr, nil
 }
 
 func ZObjectId(address uint32, header *ZHeader) uint8 {
@@ -275,15 +287,26 @@ func ZObjectId(address uint32, header *ZHeader) uint8 {
 	return uint8(res) + 1
 }
 
-func ZObjectsCount(mem *ZMemory, header *ZHeader) uint8 {
+func ZObjectsCount(mem *ZMemory, header *ZHeader) (uint8, error) {
 	count := uint8(0)
 	firstPropertyPos := uint32(0)
 
-	seq := mem.GetSequential(ZObjectAddress(1, header))
+	addr, err := ZObjectAddress(1, header)
+	if err != nil {
+		return 0, err
+	}
 
-	doCount := func() {
+	seq := mem.GetSequential(addr)
+
+	doCount := func() error {
 		count++
-		seq.pos = ZObjectAddress(count, header)
+
+		addr, err := ZObjectAddress(count, header)
+		if err != nil {
+			return err
+		}
+
+		seq.pos = addr
 
 		if firstPropertyPos == 0 || seq.pos < firstPropertyPos {
 			seq.pos += propertyOffset
@@ -293,6 +316,8 @@ func ZObjectsCount(mem *ZMemory, header *ZHeader) uint8 {
 				firstPropertyPos = propertyPos
 			}
 		}
+
+		return nil
 	}
 
 	// v3 objects tree
@@ -301,13 +326,13 @@ func ZObjectsCount(mem *ZMemory, header *ZHeader) uint8 {
 	// ...
 	// object #N
 	// object #1 properties
-	doCount()
-	for seq.pos < firstPropertyPos {
-		doCount()
+	err = doCount()
+	for err == nil && seq.pos < firstPropertyPos {
+		err = doCount()
 	}
 
 	// do not count object #0
-	return count - 1
+	return count - 1, err
 }
 
 func (obj *ZObject) PropertiesIds() []byte {

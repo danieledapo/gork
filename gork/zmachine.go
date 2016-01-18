@@ -1,9 +1,6 @@
 package gork
 
-import (
-	"fmt"
-	"log"
-)
+import "fmt"
 
 // bottom is in #0
 // top is in #len(stack-1)
@@ -24,6 +21,12 @@ func (zstack *ZStack) Top() *ZRoutine {
 	return (*zstack)[len(*zstack)-1]
 }
 
+type ZLogger interface {
+	Print(...interface{})
+	Printf(string, ...interface{})
+	Panic(...interface{})
+}
+
 type ZMachine struct {
 	header *ZHeader
 	// pc is seq.pos
@@ -32,17 +35,26 @@ type ZMachine struct {
 	dictionary *ZDictionary
 	iodev      ZIODev
 	stack      ZStack
+	logger     ZLogger
 	quitted    bool
 }
 
-func NewZMachine(mem *ZMemory, header *ZHeader, iodev ZIODev) *ZMachine {
+func NewZMachine(mem *ZMemory, header *ZHeader, iodev ZIODev, logger ZLogger) (*ZMachine, error) {
 	// cache objects
-	count := ZObjectsCount(mem, header)
+	count, err := ZObjectsCount(mem, header)
+	if err != nil {
+		return nil, err
+	}
+
 	objects := make([]*ZObject, count)
 
 	for i := uint8(1); i <= count; i++ {
 		// objects are 1-based
-		objects[i-1] = NewZObject(mem, i, header)
+		obj, err := NewZObject(mem, i, header)
+		if err != nil {
+			return nil, err
+		}
+		objects[i-1] = obj
 	}
 
 	stack := ZStack{}
@@ -54,9 +66,10 @@ func NewZMachine(mem *ZMemory, header *ZHeader, iodev ZIODev) *ZMachine {
 		objects:    objects,
 		dictionary: NewZDictionary(mem, header),
 		iodev:      iodev,
+		logger:     logger,
 		quitted:    false,
 		stack:      stack,
-	}
+	}, nil
 }
 
 func (zm *ZMachine) GetVarAt(varnum byte) uint16 {
@@ -155,7 +168,7 @@ func (zm *ZMachine) Branch(conditionOk bool) {
 		} else {
 			// otherwise we move to instruction to the given offset
 			zm.seq.pos = zm.CalcJumpAddress(offset)
-			log.Printf("Jumping to address: %X offset: %X\n", zm.seq.pos, offset)
+			zm.logger.Printf("Jumping to address: %X offset: %X\n", zm.seq.pos, offset)
 		}
 	}
 }
@@ -165,16 +178,21 @@ func (zm *ZMachine) CalcJumpAddress(offset int32) uint32 {
 	return uint32(int64(zm.seq.pos) + int64(offset) - 2)
 }
 
-func (zm *ZMachine) InterpretAll() {
-	for !zm.quitted {
-		zm.Interpret()
+func (zm *ZMachine) InterpretAll() error {
+	var err error = nil
+	for err == nil && !zm.quitted {
+		err = zm.Interpret()
 	}
+	return err
 }
 
-func (zm *ZMachine) Interpret() {
+func (zm *ZMachine) Interpret() error {
 	tmpPc := zm.seq.pos
-	op := NewZOp(zm)
-	log.Printf("Interpreting instruction at PC %X\n%s", tmpPc, op)
+	op, err := NewZOp(zm)
+	if err != nil {
+		return err
+	}
+	zm.logger.Printf("Interpreting instruction at PC %X\n%s", tmpPc, op)
 
 	switch op.class {
 	case ZEROOP:
@@ -192,6 +210,7 @@ func (zm *ZMachine) Interpret() {
 	case VAROP:
 		varOpFuncs[op.opcode](zm, op.operands)
 	}
+	return nil
 }
 
 func (zm *ZMachine) String() string {

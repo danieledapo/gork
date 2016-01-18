@@ -1,8 +1,8 @@
 package gork
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"runtime"
 	"strings"
@@ -40,7 +40,7 @@ type ZOp struct {
 	// - text   	zstring
 }
 
-func NewZOp(zm *ZMachine) *ZOp {
+func NewZOp(zm *ZMachine) (*ZOp, error) {
 	zop := new(ZOp)
 
 	zop.zm = zm
@@ -57,9 +57,10 @@ func NewZOp(zm *ZMachine) *ZOp {
 		zop.class = VAROP
 	}
 
+	var err error = nil
 	switch opcode >> 6 {
 	case 0x03:
-		zop.configureVar(opcode)
+		err = zop.configureVar(opcode)
 	case 0x02:
 		zop.configureShort(opcode)
 	default:
@@ -69,10 +70,10 @@ func NewZOp(zm *ZMachine) *ZOp {
 
 	zop.name = zop.getOpName()
 
-	return zop
+	return zop, err
 }
 
-func (zop *ZOp) configureVar(op byte) {
+func (zop *ZOp) configureVar(op byte) error {
 	// opcode is stored in the bottom 5 bits
 	zop.opcode = op & 0x1F
 
@@ -102,7 +103,7 @@ func (zop *ZOp) configureVar(op byte) {
 
 	for ; i >= 0; i -= 2 {
 		if (types>>byte(i))&0x03 != OMMITTED_CONSTANT {
-			log.Fatal("non omitted type after omitted one!")
+			return errors.New("non omitted type after omitted one!")
 		}
 	}
 
@@ -113,6 +114,7 @@ func (zop *ZOp) configureVar(op byte) {
 	// 	log.Fatalf("PC: %d 2op %d in var form does not have 2 ops %v\n",
 	// 		zop.zm.seq.pos, zop.opcode, zop.operands)
 	// }
+	return nil
 }
 
 func (zop *ZOp) configureShort(op byte) {

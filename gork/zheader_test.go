@@ -37,9 +37,9 @@ var expectedHeader ZHeader = ZHeader{
 
 func TestZHeaderConfigure(t *testing.T) {
 	mem := ZMemory(headerBuf)
-	header := NewZHeader(&mem)
+	header, err := NewZHeader(&mem)
 
-	if *header != expectedHeader {
+	if err != nil || *header != expectedHeader {
 		t.Fail()
 	}
 }

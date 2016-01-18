@@ -74,7 +74,11 @@ func TestZOP(t *testing.T) {
 			seq:    zmem.GetSequential(0),
 		}
 
-		zop := NewZOp(zmachine)
+		zop, err := NewZOp(zmachine)
+		if err != nil {
+			t.Fail()
+		}
+
 		expected := zopExpected[i]
 
 		if zop.opcode != expected.opcode || zop.class != expected.class ||

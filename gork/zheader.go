@@ -1,8 +1,8 @@
 package gork
 
 import (
+	"errors"
 	"fmt"
-	"log"
 )
 
 const (
@@ -28,19 +28,21 @@ type ZHeader struct {
 	fileChecksum uint16
 }
 
-func NewZHeader(mem *ZMemory) *ZHeader {
+func NewZHeader(mem *ZMemory) (*ZHeader, error) {
 	zmem := new(ZHeader)
-	zmem.configure(mem)
-	return zmem
+	if err := zmem.configure(mem); err != nil {
+		return nil, err
+	}
+	return zmem, nil
 }
 
-func (header *ZHeader) configure(mem *ZMemory) {
+func (header *ZHeader) configure(mem *ZMemory) error {
 	seq := mem.GetSequential(0)
 
 	header.version = seq.ReadByte()
 
 	if header.version > 3 {
-		log.Fatal("versions > 3 are not supported!")
+		return errors.New("versions > 3 are not supported!")
 	}
 
 	header.config = seq.ReadByte()
@@ -57,11 +59,11 @@ func (header *ZHeader) configure(mem *ZMemory) {
 	header.dynMemSize = seq.ReadWord()
 
 	if header.dynMemSize < 64 {
-		log.Fatal("dynamic size cannot be < 64 bytes")
+		return errors.New("dynamic size cannot be < 64 bytes")
 	}
 
 	if header.highStart < header.dynMemSize {
-		log.Fatal("invalid mem: high memory must not overlap dynamic memory")
+		return errors.New("invalid mem: high memory must not overlap dynamic memory")
 	}
 
 	// who cares if dynMemSize + staticMemorySize(min(0xFFFF, fileSize)) < 64KB ?
@@ -78,10 +80,12 @@ func (header *ZHeader) configure(mem *ZMemory) {
 
 	// v3 max file length 128K
 	if header.fileLength > 128*1024 {
-		log.Fatal("mem file too big!")
+		return errors.New("mem file too big!")
 	}
 
 	header.fileChecksum = seq.ReadWord()
+
+	return nil
 }
 
 func (header *ZHeader) String() string {

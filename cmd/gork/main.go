@@ -30,13 +30,23 @@ func main() {
 	}
 	defer logfile.Close()
 
-	log.SetOutput(logfile)
+	logger := log.New(logfile, "", log.LstdFlags)
 
 	mem := gork.NewZMemory(buf)
 
-	header := gork.NewZHeader(mem)
+	header, err := gork.NewZHeader(mem)
+	if err != nil {
+		panic(err)
+	}
 
-	gork.NewZMachine(mem, header, gork.ZTerminal{}).InterpretAll()
+	zm, err := gork.NewZMachine(mem, header, gork.ZTerminal{}, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := zm.InterpretAll(); err != nil {
+		panic(err)
+	}
 }
 
 func storyLogFilename(story string) string {

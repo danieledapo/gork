@@ -107,7 +107,10 @@ func prelude() (*ZMemory, *ZHeader, uint8) {
 	mem := ZMemory(createZObjectBuf())
 	header := &ZHeader{objTblPos: 0x00}
 
-	count := ZObjectsCount(&mem, header)
+	count, err := ZObjectsCount(&mem, header)
+	if err != nil {
+		panic("count failed -> test corrupted")
+	}
 
 	return &mem, header, count
 }
@@ -124,7 +127,11 @@ func TestZObject(t *testing.T) {
 	mem, header, count := prelude()
 
 	for i := uint8(0); i < count; i++ {
-		obj := NewZObject(mem, i+1, header)
+		obj, err := NewZObject(mem, i+1, header)
+		if err != nil {
+			t.Fail()
+		}
+
 		expected := zobjectExpected[i]
 
 		if obj.number != expected.number ||
@@ -166,12 +173,20 @@ func TestZObjectGetProperty(t *testing.T) {
 	mem, header, count := prelude()
 
 	for i := byte(0); i < count; i++ {
-		obj := NewZObject(mem, i+1, header)
+		obj, err := NewZObject(mem, i+1, header)
+		if err != nil {
+			t.Fail()
+		}
+
 		good := zobjectExpected[i]
 
 		for key, prop := range good.properties {
 			if len(prop) <= 2 {
-				rProp := obj.GetProperty(key)
+				rProp, err := obj.GetProperty(key)
+
+				if err != nil {
+					t.Fail()
+				}
 
 				if len(prop) == 1 {
 					if rProp != uint16(prop[0]) {
@@ -184,8 +199,12 @@ func TestZObjectGetProperty(t *testing.T) {
 		}
 
 		// should return default property
-		if _, ok := obj.properties[31]; !ok && obj.GetProperty(31) != defaultPropWord {
-			t.Fail()
+		if _, ok := obj.properties[31]; !ok {
+			p, err := obj.GetProperty(31)
+
+			if err != nil && p != defaultPropWord {
+				t.Fail()
+			}
 		}
 	}
 }
@@ -194,7 +213,10 @@ func TestZObjectSetProperty(t *testing.T) {
 	mem, header, count := prelude()
 
 	for i := byte(0); i < count; i++ {
-		obj := NewZObject(mem, i+1, header)
+		obj, err := NewZObject(mem, i+1, header)
+		if err != nil {
+			t.Fail()
+		}
 
 		var expected uint16
 
@@ -211,7 +233,7 @@ func TestZObjectSetProperty(t *testing.T) {
 
 			if ok {
 				obj.SetProperty(id, expected)
-				if obj.GetProperty(id) != expected {
+				if p, err := obj.GetProperty(id); err != nil && p != expected {
 					t.Fail()
 				}
 			}
@@ -223,7 +245,10 @@ func TestZObjectPropertyLen(t *testing.T) {
 	mem, header, count := prelude()
 
 	for i := byte(0); i < count; i++ {
-		obj := NewZObject(mem, i+1, header)
+		obj, err := NewZObject(mem, i+1, header)
+		if err != nil {
+			t.Fail()
+		}
 
 		seq := mem.GetSequential(uint32(obj.propertiesPos))
 		if seq.ReadByte() != 0 {
@@ -252,7 +277,10 @@ func TestZObjectGetFirstPropertyAddr(t *testing.T) {
 	mem, header, count := prelude()
 
 	for i := byte(0); i < count; i++ {
-		obj := NewZObject(mem, i+1, header)
+		obj, err := NewZObject(mem, i+1, header)
+		if err != nil {
+			t.Fail()
+		}
 
 		seq := mem.GetSequential(uint32(obj.propertiesPos))
 
@@ -271,7 +299,10 @@ func TestZObjectGetPropertyAddr(t *testing.T) {
 	mem, header, count := prelude()
 
 	for i := byte(0); i < count; i++ {
-		obj := NewZObject(mem, i+1, header)
+		obj, err := NewZObject(mem, i+1, header)
+		if err != nil {
+			t.Fail()
+		}
 
 		seq := mem.GetSequential(uint32(obj.propertiesPos))
 
@@ -316,7 +347,10 @@ func TestZObjectNextProperty(t *testing.T) {
 	mem, header, count := prelude()
 
 	for i := byte(0); i < count; i++ {
-		obj := NewZObject(mem, i+1, header)
+		obj, err := NewZObject(mem, i+1, header)
+		if err != nil {
+			t.Fail()
+		}
 
 		exp := zobjectExpected[i]
 
@@ -337,9 +371,9 @@ func TestZObjectNextProperty(t *testing.T) {
 func TestZObjectId(t *testing.T) {
 	header := &ZHeader{objTblPos: 0}
 	for i := byte(0); i < 255; i++ {
-		addr := ZObjectAddress(i+1, header)
+		addr, err := ZObjectAddress(i+1, header)
 
-		if ZObjectId(addr, header) != i+1 {
+		if err != nil || ZObjectId(addr, header) != i+1 {
 			t.Fail()
 		}
 	}

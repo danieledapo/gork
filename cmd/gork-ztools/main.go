@@ -48,7 +48,10 @@ func dumpStoryInfo(story string, conf *config) {
 
 	fmt.Println("\nStory file is", story)
 
-	header := gork.NewZHeader(mem)
+	header, err := gork.NewZHeader(mem)
+	if err != nil {
+		panic(err)
+	}
 
 	if conf.showHeader {
 		fmt.Println(header)
@@ -89,13 +92,20 @@ func DumpAbbreviations(mem *gork.ZMemory, header *gork.ZHeader) {
 }
 
 func DumpAllZObjects(mem *gork.ZMemory, header *gork.ZHeader) {
-	total := gork.ZObjectsCount(mem, header)
+	total, err := gork.ZObjectsCount(mem, header)
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Print("\n    **** Objects ****\n\n")
 	fmt.Printf("  Object count = %d\n\n", total)
 
 	for i := uint8(1); i <= total; i++ {
-		fmt.Printf("%3d. %s", i, gork.NewZObject(mem, i, header))
+		obj, err := gork.NewZObject(mem, i, header)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("%3d. %s", i, obj)
 	}
 }
 
@@ -103,7 +113,10 @@ func DumpZObjectsTree(mem *gork.ZMemory, header *gork.ZHeader) {
 
 	fmt.Print("\n    **** Object tree ****\n\n")
 
-	total := gork.ZObjectsCount(mem, header)
+	total, err := gork.ZObjectsCount(mem, header)
+	if err != nil {
+		panic(err)
+	}
 
 	var printObject func(obj *gork.ZObject, depth int)
 	printObject = func(obj *gork.ZObject, depth int) {
@@ -116,19 +129,28 @@ func DumpZObjectsTree(mem *gork.ZMemory, header *gork.ZHeader) {
 			fmt.Printf("\"%s\"\n", obj.Name())
 
 			if obj.ChildId() != 0 {
-				childobj := gork.NewZObject(mem, obj.ChildId(), header)
+				childobj, err := gork.NewZObject(mem, obj.ChildId(), header)
+				if err != nil {
+					panic(err)
+				}
 				printObject(childobj, depth+1)
 			}
 
 			if obj.SiblingId() == 0 {
 				break
 			}
-			obj = gork.NewZObject(mem, obj.SiblingId(), header)
+			obj, err = gork.NewZObject(mem, obj.SiblingId(), header)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 
 	for i := uint8(1); i <= total; i++ {
-		zobj := gork.NewZObject(mem, i, header)
+		zobj, err := gork.NewZObject(mem, i, header)
+		if err != nil {
+			panic(err)
+		}
 
 		// root
 		if zobj.ParentId() == 0 {
