@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -34,17 +35,19 @@ func (_ ZTerminal) ReadLine() string {
 }
 
 type ZSshTerminal struct {
-	term *terminal.Terminal
+	Term *terminal.Terminal
 }
 
 func (sshTerm ZSshTerminal) Print(s ...interface{}) {
 	for _, si := range s {
-		sshTerm.term.Write([]byte(fmt.Sprint(si)))
+		sis := fmt.Sprint(si)
+		sis = strings.Replace(sis, "\n", "\r\n", -1)
+		sshTerm.Term.Write([]byte(sis))
 	}
 }
 
 func (sshTerm ZSshTerminal) ReadLine() string {
-	l, err := sshTerm.term.ReadLine()
+	l, err := sshTerm.Term.ReadLine()
 
 	if err != nil {
 		panic(err)

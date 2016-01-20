@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,18 +13,42 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
+	identity := flag.String("identity", "", "ssh key to use to start server")
+	addr := flag.String("address", "0.0.0.0:4273", "address to listen on for ssh connections")
+	flag.Parse()
+
+	if len(flag.Args()) < 1 {
 		fmt.Println("Please provide a game")
 		return
 	}
 
-	story := os.Args[1]
+	story := flag.Args()[0]
 
 	buf, err := ioutil.ReadFile(story)
 	if err != nil {
 		panic(err)
 	}
+	mem := gork.NewZMemory(buf)
 
+	header, err := gork.NewZHeader(mem)
+	if err != nil {
+		panic(err)
+	}
+
+	if *identity != "" {
+		server := &SshServer{
+			id_rsa: *identity,
+			story:  story,
+			mem:    mem,
+			header: header,
+		}
+		server.run(*addr)
+	} else {
+		terminalUI(story, mem, header)
+	}
+}
+
+func terminalUI(story string, mem *gork.ZMemory, header *gork.ZHeader) {
 	logfile, err := os.Create(storyLogFilename(story))
 	if err != nil {
 		panic(err)
@@ -31,13 +56,6 @@ func main() {
 	defer logfile.Close()
 
 	logger := log.New(logfile, "", log.LstdFlags)
-
-	mem := gork.NewZMemory(buf)
-
-	header, err := gork.NewZHeader(mem)
-	if err != nil {
-		panic(err)
-	}
 
 	zm, err := gork.NewZMachine(mem, header, gork.ZTerminal{}, logger)
 	if err != nil {
