@@ -15,6 +15,7 @@ import (
 func main() {
 	identity := flag.String("identity", "", "ssh key to use to start server")
 	addr := flag.String("address", "0.0.0.0:4273", "address to listen on for ssh connections")
+	ws := flag.Bool("ws", false, "start the web socket server on addr")
 	flag.Parse()
 
 	if len(flag.Args()) < 1 {
@@ -38,6 +39,13 @@ func main() {
 	if *identity != "" {
 		server := &SshServer{
 			id_rsa: *identity,
+			story:  story,
+			mem:    mem,
+			header: header,
+		}
+		server.run(*addr)
+	} else if *ws {
+		server := &WSServer{
 			story:  story,
 			mem:    mem,
 			header: header,

@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -54,4 +55,25 @@ func (sshTerm ZSshTerminal) ReadLine() string {
 	}
 
 	return l
+}
+
+type ZWSDev struct {
+	Conn *websocket.Conn
+}
+
+func (ws *ZWSDev) Print(s ...interface{}) {
+	for _, si := range s {
+		sis := fmt.Sprint(si)
+		ws.Conn.WriteMessage(websocket.TextMessage, []byte(sis))
+	}
+}
+
+func (ws *ZWSDev) ReadLine() string {
+	msg_type, l, err := ws.Conn.ReadMessage()
+
+	if msg_type != websocket.TextMessage || err != nil {
+		panic(err)
+	}
+
+	return string(l)
 }
