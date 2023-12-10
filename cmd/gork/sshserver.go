@@ -9,7 +9,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/d-dorazio/gork/gork"
+	"github.com/danieledapo/gork/gork"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 )

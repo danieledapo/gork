@@ -9,7 +9,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/d-dorazio/gork/gork"
+	"github.com/danieledapo/gork/gork"
 )
 
 func main() {

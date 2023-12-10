@@ -6,9 +6,8 @@ implemented. It should be just a matter of adding the missing instructions.
 
 ### How to Install
 ```bash
-$ go get github.com/d-dorazio/gork
-$ go install github.com/d-dorazio/gork/cmd/gork
-$ go install github.com/d-dorazio/gork/cmd/gork-ztools
+$ go install github.com/danieledapo/gork/cmd/gork@latest
+$ go install github.com/danieledapo/gork/cmd/gork-ztools@latest
 ```
 
 ### Usage

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/d-dorazio/gork/gork"
+	"github.com/danieledapo/gork/gork"
 )
 
 type config struct {

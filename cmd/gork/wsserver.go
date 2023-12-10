@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/d-dorazio/gork/gork"
+	"github.com/danieledapo/gork/gork"
 	"github.com/gorilla/websocket"
 )
 
